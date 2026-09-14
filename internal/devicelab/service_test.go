@@ -36,7 +36,7 @@ func (r *runner) Run(ctx context.Context, args ...string) (string, error) {
 		return "1", nil
 	case len(args) == 5 && args[3] == "avd":
 		return "Test_AVD\nOK", nil
-	case len(args) == 6 && args[3] == "sms":
+	case len(args) == 7 && args[3] == "sms":
 		r.injections = append(r.injections, append([]string(nil), args...))
 		return r.outcome, r.err
 	default:
@@ -58,7 +58,7 @@ func TestInjectionScopePersistenceAndIdempotency(t *testing.T) {
 	if err != nil || result.Injection.Status != "injected" || result.Message.Source != "emulator" || result.Message.Mode != "simulate" {
 		t.Fatalf("injection: %+v %v", result, err)
 	}
-	if len(r.injections) != 1 || !reflect.DeepEqual(r.injections[0][:5], []string{"-s", "emulator-5554", "emu", "sms", "pdu"}) || strings.ContainsAny(r.injections[0][5], "\r\n") {
+	if len(r.injections) != 1 || !reflect.DeepEqual(r.injections[0][:6], []string{"-s", "emulator-5554", "emu", "sms", "send", in.From}) || strings.ContainsAny(r.injections[0][6], "\r\n") {
 		t.Fatalf("unsafe command: %+v", r.injections)
 	}
 	second, err := s.Inject(ctx, in)

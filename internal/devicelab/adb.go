@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf16"
 )
 
 var ErrDisabled = errors.New("device lab is disabled; set TEXTDOCK_ADB_ENABLED=true")
@@ -165,4 +166,31 @@ func ValidateBody(body string) error {
 		}
 	}
 	return nil
+}
+
+// ConsoleText uses documented UTF-16 escapes. Passing raw supplementary UTF-8
+// characters through sms send can truncate them to one UCS-2 unit in emulator
+// versions whose text converter predates surrogate pairs. Explicit pairs avoid
+// that conversion while staying on the current modem's supported send path.
+func ConsoleText(body string) (string, error) {
+	if err := ValidateBody(body); err != nil {
+		return "", err
+	}
+	var out strings.Builder
+	for _, r := range body {
+		switch {
+		case r == '\\':
+			out.WriteString(`\\`)
+		case r == '\n':
+			out.WriteString(`\n`)
+		case r < 128:
+			out.WriteRune(r)
+		case r <= 0xffff:
+			fmt.Fprintf(&out, `\u%04x`, r)
+		default:
+			high, low := utf16.EncodeRune(r)
+			fmt.Fprintf(&out, `\u%04x\u%04x`, high, low)
+		}
+	}
+	return out.String(), nil
 }

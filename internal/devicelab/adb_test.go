@@ -20,6 +20,10 @@ func TestDeviceClassificationAndConsoleEncoding(t *testing.T) {
 	if err := ValidateBody("code \"482193\"; $(ignored)\\literal\n@login.example #482193 🙂"); err != nil {
 		t.Fatal(err)
 	}
+	encoded, err := ConsoleText("café 漢字🙂\\literal\nkill")
+	if err != nil || encoded != `caf\u00e9 \u6f22\u5b57\ud83d\ude42\\literal\nkill` || strings.ContainsAny(encoded, "\r\n") {
+		t.Fatalf("UTF-16 console escapes: %q %v", encoded, err)
+	}
 	for _, body := range []string{"", "\t", "hi\x00kill", "hi\rkill", strings.Repeat("x", 1025)} {
 		if err := ValidateBody(body); !errors.Is(err, ErrInput) {
 			t.Fatalf("unsupported body accepted: %q", body)

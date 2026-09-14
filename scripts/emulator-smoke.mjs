@@ -32,7 +32,7 @@ try {
   const controlResponse = await fetch(base + '/lab/injections', { method: 'POST', headers, body: JSON.stringify({ serial, from: '+12025550100', to: '+12025550123', body: 'TextDock control message', idempotency_key: 'control-message' }) });
   const control = await controlResponse.json();
   assert.equal(control.injection?.status, 'injected', JSON.stringify(control));
-  const body = 'TextDock code "482193"; $literal \\backslash 🙂\n\n@login.example.test #482193';
+  const body = 'TextDock code "482193"; $literal \\backslash café 漢字🙂\n\n@login.example.test #482193';
   const payload = { serial, inbox: 'local', from: '+12025550100', to: '+12025550123', body, run_id: 'real-emulator-ci', idempotency_key: 'real-emulator-ci' };
   const response = await fetch(base + '/lab/injections', { method: 'POST', headers, body: JSON.stringify(payload) });
   assert.equal(response.status, 201);
