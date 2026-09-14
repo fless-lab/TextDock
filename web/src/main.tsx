@@ -1240,7 +1240,11 @@ function App() {
         />
       )}
       {modal === "relay" && (
-        <RelayDialog info={relay} close={() => setModal(undefined)} />
+        <RelayDialog
+          info={relay}
+          version={info?.version}
+          close={() => setModal(undefined)}
+        />
       )}
       {modal === "workspaces" && (
         <WorkspacesDialog

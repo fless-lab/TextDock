@@ -64,6 +64,14 @@ npm install {{ASSET_URL}}/textdock-sdk-{{VERSION}}.tgz
 
 See the [SDK reference](/reference/sdk) for local and production driver setup.
 
+## Android gateway preview
+
+The [development APK]({{ASSET_URL}}/textdock-gateway-v{{VERSION}}.apk) connects an
+Android 8+ test phone's default SIM to an explicitly enabled TextDock relay.
+Read the [gateway setup and preview limitations](/reference/android-gateway)
+before using it. It is debug-signed and has not been validated on physical
+hardware by the automated build.
+
 ## Build from source
 
 Requirements: Go 1.26+, Node.js 24+, npm and Make.

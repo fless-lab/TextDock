@@ -68,6 +68,14 @@ func TestIdempotentRelayAndUnknownDoesNotRetry(t *testing.T) {
 	if m.Status != "unknown" {
 		t.Fatalf("ambiguous outcome: %s", m.Status)
 	}
+	resolved, err := db.RelayReceipt(ctx, m.ID, relay.Result{State: "delivered", ProviderID: "SMconfirmed"})
+	if err != nil || resolved.Status != "delivered" {
+		t.Fatalf("late receipt did not resolve uncertainty: %+v %v", resolved, err)
+	}
+	job, err := db.RelayJob(ctx, m.ID)
+	if err != nil || job.Error != "" {
+		t.Fatalf("stale uncertainty remained after confirmation: %+v %v", job, err)
+	}
 	in.Body = "Different content"
 	if _, err := capture.Send(ctx, in, "api"); !errors.Is(err, relay.ErrIdempotency) {
 		t.Fatalf("conflicting key accepted: %v", err)

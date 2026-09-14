@@ -5,6 +5,16 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.6.0-beta.2] - 2026-09-14
+
+### Fixed
+
+- Clear stale uncertainty diagnostics when a signed receipt confirms the real relay outcome.
+
+### Added
+
+- Direct Android development APK links in the relay UI and versioned downloads page.
+
 ## [0.6.0-beta.1] - 2026-09-14
 
 ### Added

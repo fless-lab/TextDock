@@ -70,7 +70,7 @@ The OTP endpoint returns `{"code":"482193","message_id":"msg_…"}`. The
 application remains responsible for generating, expiring and verifying codes.
 Extraction is a heuristic for 4–8 digit candidates, not an authentication service.
 
-## Available in v0.6.0-beta.1
+## Available in v0.6.0-beta.2
 
 This checkout includes the native-relay preview. The public documentation site
 tracks the latest stable release. See [real relay setup and validation](docs/RELAY.md).

@@ -21,10 +21,15 @@ interface Gateway {
 export function RelayDialog({
   info,
   close,
+  version = "",
 }: {
   info: RelayInfo;
   close: () => void;
+  version?: string;
 }) {
+  const apkURL = /^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(version)
+    ? `https://github.com/fless-lab/TextDock/releases/download/${version}/textdock-gateway-${version}.apk`
+    : "https://github.com/fless-lab/TextDock/releases";
   const [gateways, setGateways] = useState<Gateway[]>([]);
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
@@ -115,6 +120,14 @@ export function RelayDialog({
       {info.driver === "android" && (
         <>
           <h3>Enroll an Android gateway</h3>
+          <a
+            className="secondary"
+            href={apkURL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Download Android gateway APK
+          </a>
           <p className="modal-description">
             Install the development APK from the release, then enter this
             server’s LAN/HTTPS address and the gateway token in the app. The

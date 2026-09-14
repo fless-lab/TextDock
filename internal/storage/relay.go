@@ -235,7 +235,11 @@ func (s *SQLite) RelayReceipt(ctx context.Context, messageID string, result rela
 	if rank[state] >= rank[result.State] {
 		result.State = state
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE relay_jobs SET state=?,provider_id=?,lease_until=0 WHERE message_id=?`, result.State, result.ProviderID, messageID); err != nil {
+	detail := ""
+	if result.State == "failed" {
+		detail = "Twilio reported delivery failure"
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE relay_jobs SET state=?,provider_id=?,error=?,lease_until=0 WHERE message_id=?`, result.State, result.ProviderID, detail, messageID); err != nil {
 		return message.Message{}, err
 	}
 	m, err := updateRelayMessage(ctx, tx, messageID, result.State, "Twilio delivery receipt")
