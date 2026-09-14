@@ -17,3 +17,6 @@ site/.vitepress/cache/
 site/.vitepress/dist/
 site/test-results/
 site/playwright-report/
+android/.gradle/
+android/**/build/
+android/local.properties
