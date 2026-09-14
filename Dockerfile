@@ -18,7 +18,7 @@ COPY internal/ internal/
 COPY --from=web /src/internal/ui/dist/ internal/ui/dist/
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o /textdock ./cmd/textdock
 
-FROM alpine:3.23
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates && addgroup -S textdock && adduser -S -G textdock textdock && mkdir /data && chown textdock:textdock /data
 COPY --from=build /textdock /usr/local/bin/textdock
 USER textdock
