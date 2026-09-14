@@ -83,14 +83,19 @@ func (s *Service) Inject(ctx context.Context, in Input) (Result, error) {
 		return Result{}, fmt.Errorf("%w: select an emulator serial and an E.164-shaped sender", ErrInput)
 	}
 	body := strings.ReplaceAll(in.Body, "\r\n", "\n")
-	encoded, err := ConsoleText(body)
+	err := ValidateBody(body)
 	if err != nil {
 		return Result{}, err
 	}
-	m, err := message.New(message.Input{Inbox: in.Inbox, To: in.To, From: in.From, Body: body, RunID: in.RunID, IdempotencyKey: in.IdempotencyKey, Mode: "simulate", Direction: "inbound"}, "emulator")
+	m, err := message.New(message.Input{Inbox: in.Inbox, To: in.To, From: in.From, Body: body, RunID: in.RunID, IdempotencyKey: in.IdempotencyKey, Mode: "simulate", Direction: "inbound", ForceUnicode: true}, "emulator")
 	if err != nil {
 		return Result{}, fmt.Errorf("%w: invalid message fields", ErrInput)
 	}
+	pdus, err := DeliverPDUs(m.From, m.Body, m.ID, m.CreatedAt)
+	if err != nil {
+		return Result{}, err
+	}
+	m.Analysis.Segments = len(pdus)
 	status := s.Status(ctx)
 	if !status.Available {
 		return Result{}, fmt.Errorf("%w: %s", ErrUnavailable, status.Error)
@@ -121,12 +126,17 @@ func (s *Service) Inject(ctx context.Context, in Input) (Result, error) {
 	if s.Changed != nil {
 		s.Changed(m.Inbox, m.To, m.RunID)
 	}
-	output, commandErr := s.Runner.Run(ctx, "-s", in.Serial, "emu", "sms", "send", m.From, encoded)
-	state, detail := "unknown", "ADB outcome uncertain; this injection will not be repeated automatically"
-	if strings.Contains(output, "KO:") {
-		state, detail = "failed", "Emulator console rejected the SMS"
-	} else if commandErr == nil && hasOK(output) {
-		state, detail = "injected", "Emulator console accepted the simulated incoming SMS"
+	state, detail, output := "injected", "Emulator console accepted the simulated incoming SMS", ""
+	for i, pdu := range pdus {
+		part, commandErr := s.Runner.Run(ctx, "-s", in.Serial, "emu", "sms", "pdu", pdu)
+		output += fmt.Sprintf("Part %d/%d: %s\n", i+1, len(pdus), part)
+		if strings.Contains(part, "KO:") || commandErr != nil || !hasOK(part) {
+			state, detail = "unknown", "ADB outcome uncertain or multipart injection incomplete; automatic reinjection is disabled"
+			if i == 0 && strings.Contains(part, "KO:") {
+				state, detail = "failed", "Emulator console rejected the SMS"
+			}
+			break
+		}
 	}
 	if len(output) > 4096 {
 		output = output[:4096]

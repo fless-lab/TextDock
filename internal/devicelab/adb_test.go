@@ -17,12 +17,11 @@ func TestDeviceClassificationAndConsoleEncoding(t *testing.T) {
 			t.Fatalf("unsafe serial accepted: %q", serial)
 		}
 	}
-	encoded, err := ConsoleText("code \"482193\"; $(ignored)\\literal\r\n@login.example #482193 🙂")
-	if err != nil || strings.ContainsAny(encoded, "\r\n") || !strings.Contains(encoded, `\\literal\n@login.example`) {
-		t.Fatalf("console encoding: %q %v", encoded, err)
+	if err := ValidateBody("code \"482193\"; $(ignored)\\literal\n@login.example #482193 🙂"); err != nil {
+		t.Fatal(err)
 	}
 	for _, body := range []string{"", "\t", "hi\x00kill", "hi\rkill", strings.Repeat("x", 1025)} {
-		if _, err := ConsoleText(body); !errors.Is(err, ErrInput) {
+		if err := ValidateBody(body); !errors.Is(err, ErrInput) {
 			t.Fatalf("unsupported body accepted: %q", body)
 		}
 	}

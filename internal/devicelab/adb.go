@@ -153,18 +153,16 @@ func ParseDevices(text string) []Device {
 	return out
 }
 
-// The emulator console parses the remaining command text as the SMS body.
-// Escape backslashes and line feeds so no raw command delimiter reaches it.
-// CRLF is normalized to LF; other control characters are rejected.
-func ConsoleText(body string) (string, error) {
-	body = strings.ReplaceAll(body, "\r\n", "\n")
+// ValidateBody bounds the input before PDU encoding. API input normalizes CRLF
+// to LF; other control characters are rejected rather than silently changed.
+func ValidateBody(body string) error {
 	if len(body) > 1024 || strings.TrimSpace(body) == "" {
-		return "", fmt.Errorf("%w: body must contain 1–1024 UTF-8 bytes", ErrInput)
+		return fmt.Errorf("%w: body must contain 1–1024 UTF-8 bytes", ErrInput)
 	}
 	for _, r := range body {
 		if unicode.IsControl(r) && r != '\n' {
-			return "", fmt.Errorf("%w: body contains an unsupported control character", ErrInput)
+			return fmt.Errorf("%w: body contains an unsupported control character", ErrInput)
 		}
 	}
-	return strings.NewReplacer("\\", "\\\\", "\n", "\\n").Replace(body), nil
+	return nil
 }

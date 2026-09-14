@@ -16,9 +16,9 @@ func main() {
 		switch {
 		case len(args) == 5 && args[2] == "shell": fmt.Println("1")
 		case len(args) == 5 && args[3] == "avd": fmt.Println("TextDock_Test\nOK")
-		case len(args) == 7 && args[2] == "emu" && args[3] == "sms" && args[4] == "send":
-			if strings.ContainsAny(args[6], "\r\n\x00") { fmt.Fprintln(os.Stderr, "unsafe console delimiter"); os.Exit(1) }
-			if strings.Contains(args[6], "reject-this-message") { fmt.Println("KO: fixture rejected message") } else { fmt.Println("OK") }
+		case len(args) == 6 && args[2] == "emu" && args[3] == "sms" && args[4] == "pdu":
+			if strings.ContainsAny(args[5], "\r\n\x00") { fmt.Fprintln(os.Stderr, "unsafe console delimiter"); os.Exit(1) }
+			if strings.Contains(args[5], "00720065006a006500630074002d0074006800690073002d006d006500730073006100670065") { fmt.Println("KO: fixture rejected message") } else { fmt.Println("OK") }
 		default: os.Exit(1)
 		}
 	default: os.Exit(1)

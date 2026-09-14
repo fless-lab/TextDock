@@ -40,5 +40,5 @@ jobs:
           profile: pixel_6
           emulator-port: 5554
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -no-metrics
           script: TEXTDOCK_TEST_SERIAL=emulator-5554 node scripts/emulator-smoke.mjs
