@@ -5,6 +5,13 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.6.0-beta.3] - 2026-09-14
+
+### Fixed
+
+- Use current Android platform tools in CI instead of the retired SDK `tools` package.
+- Give Android SMS result intents a unique job/segment identity.
+
 ## [0.6.0-beta.2] - 2026-09-14
 
 ### Fixed

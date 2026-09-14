@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.IBinder;
+import android.net.Uri;
 import android.telephony.SmsManager;
 import org.json.JSONObject;
 import java.io.InputStream;
@@ -83,7 +84,7 @@ public final class GatewayService extends Service {
             if (stopping) { prefs.edit().putString("phase", "ack").putString("result", "unknown").putString("error", "Gateway stopped after claiming a job").commit(); return; }
             ArrayList<PendingIntent> sent = new ArrayList<>();
             for (int i = 0; i < parts.size(); i++) {
-                Intent intent = new Intent(this, SmsSentReceiver.class).setAction("dev.textdock.gateway.SENT").putExtra("job", job.getString("id")).putExtra("part", i);
+                Intent intent = new Intent(this, SmsSentReceiver.class).setAction("dev.textdock.gateway.SENT").setData(Uri.parse("textdock-sms://sent/" + job.getString("id") + "/" + i)).putExtra("job", job.getString("id")).putExtra("part", i);
                 sent.add(PendingIntent.getBroadcast(this, (job.getString("id") + ":" + i).hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
             }
             status("Sending " + job.getString("id") + " via SIM");
