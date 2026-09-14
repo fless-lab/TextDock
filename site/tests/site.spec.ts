@@ -11,11 +11,11 @@ test('homepage, documentation navigation and responsive layout', async ({ page }
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => { if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') external.push(request.url()); });
   await page.goto(base);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('SMS inbox.');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('TextDock');
   await expect(page.locator('.release-line')).toContainText(`v${version}`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   await page.screenshot({ path: info.outputPath('home.png'), fullPage: true });
-  await page.getByRole('link', { name: 'Get started' }).click();
+  await page.getByRole('link', { name: 'installation guide', exact: true }).click();
   await expect(page).toHaveURL(/\/TextDock\/guide\/getting-started\.html$/);
   await expect(page.locator('.vp-doc')).toContainText('18257');
   expect(errors).toEqual([]);

@@ -3,6 +3,11 @@
 TextDock is a working inbox, not a landing page. The user's design brief is
 **clean, sparse and utilitarian**.
 
+The public website follows the same brief: a technical project page with direct
+installation instructions and documentation links. Use Arial/Helvetica for
+normal text, ordinary heading sizes and weights, and monospace only for code.
+Avoid split-screen heroes, fake terminal frames, feature grids and marketing copy.
+
 - Lead with messages and actions; use factual labels and brief empty states.
 - System fonts, neutral surfaces, thin separators and one restrained accent.
 - Compact navigation; content and technical details get the available space.

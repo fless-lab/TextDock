@@ -74,7 +74,7 @@ export default defineConfig({
     search: { provider: 'local' },
     outline: { level: [2, 3], label: 'On this page' },
     socialLinks: [{ icon: 'github', link: 'https://github.com/fless-lab/TextDock' }],
-    footer: { message: `<a href="${base}project/license.html">MIT licensed</a> · Local development remains standalone.`, copyright: 'TextDock contributors' },
+    footer: { message: `<a href="${base}project/license.html">MIT license</a>`, copyright: 'TextDock contributors' },
     docFooter: { prev: 'Previous', next: 'Next' },
   },
 });

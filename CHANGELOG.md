@@ -5,6 +5,14 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-14
+
+### Changed
+
+- Replaced the promotional website homepage with a concise project page focused on installation, API usage and documentation.
+- Standardized website typography on Arial/Helvetica, with conventional sizes and weights.
+- Removed hero slogans, feature grids, terminal-window decoration and promotional calls to action.
+
 ## [0.5.1] - 2026-09-14
 
 ### Added

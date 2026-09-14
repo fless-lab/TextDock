@@ -70,7 +70,7 @@ The OTP endpoint returns `{"code":"482193","message_id":"msg_…"}`. The
 application remains responsible for generating, expiring and verifying codes.
 Extraction is a heuristic for 4–8 digit candidates, not an authentication service.
 
-## Available in v0.5.1
+## Available in v0.5.2
 
 - Persistent SQLite inbox and responsive desktop/phone UI, light and dark themes.
 - JSON capture API, search, recipient/run/time filters, per-message JSON export

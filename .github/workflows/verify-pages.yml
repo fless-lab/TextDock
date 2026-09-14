@@ -40,7 +40,7 @@ jobs:
           const base = 'https://fless-lab.github.io/TextDock/';
           const version = tag.slice(1);
           const checks = [
-            ['', ['Your local', tag]],
+            ['', ['SMS development server', tag]],
             ['guide/test-numbers.html', ['Phone numbers and OTPs in tests', 'TextDock currently captures']],
             ['project/status.html', ['Current status and next steps', version]],
             ['downloads.html', [`releases/download/${tag}/textdock_${tag}_linux_amd64.tar.gz`, `textdock-sdk-${version}.tgz`]],

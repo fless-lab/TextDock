@@ -1,55 +1,69 @@
 <script setup>
 import { withBase } from 'vitepress';
 import release from '../../content/release.json';
-
-const features = [
-  ['Inspect messages', 'Search inboxes, inspect encoding and segments, copy OTPs, and export test messages.', '/guide/workflow'],
-  ['Use your phone', 'Pair a read-only phone inbox by QR code. Messages arrive live over your local network.', '/guide/connect'],
-  ['Test delivery behavior', 'Simulate delays, failures and incoming SMS. Inspect signed callbacks, retries and replays.', '/guide/simulation'],
-  ['Connect your application', 'Use the HTTP API or the Node SDK with local, Twilio, Vonage and OVH drivers.', '/guide/providers'],
-];
 </script>
 
 <template>
-  <main class="home-page">
-    <section class="intro" aria-labelledby="intro-heading">
-      <div class="intro-copy">
-        <p class="release-line"><span class="release-dot" /> Open source · {{ release.tag }}</p>
-        <h1 id="intro-heading">Your local<br />SMS inbox.</h1>
-        <p class="intro-description">Capture messages, inspect verification codes and test delivery flows. One binary, one local database, no provider account needed.</p>
-        <div class="home-actions">
-          <a class="home-primary" :href="withBase('/guide/getting-started.html')">Get started <span aria-hidden="true">→</span></a>
-          <a class="home-secondary" :href="withBase('/downloads.html')">Download {{ release.tag }}</a>
-        </div>
-        <p class="runtime-note">Go + SQLite · Built-in web UI · Port 18257</p>
-      </div>
-      <div class="quick-example" aria-label="Local capture example">
-        <div class="example-heading"><span>Terminal</span><span>Local capture</span></div>
-        <pre><code><span class="command-comment"># Start TextDock</span>
-./textdock
+  <main class="project-home">
+    <header class="project-heading">
+      <h1>TextDock</h1>
+      <p>SMS development server</p>
+    </header>
 
-<span class="command-comment"># Send a test message</span>
-curl localhost:18257/api/v1/messages \
+    <div class="project-columns">
+      <div class="project-content">
+        <p>TextDock captures SMS sent by your application and displays them in a local web interface. Use it to inspect messages, retrieve verification codes and test delivery callbacks.</p>
+        <p>It runs as a single binary with SQLite storage. The default capture mode does not send messages to a mobile network.</p>
+
+        <section aria-labelledby="install-heading">
+          <h2 id="install-heading">Installation</h2>
+          <p><a :href="withBase('/downloads.html')">Download a binary</a> for your system, extract it, then run:</p>
+          <pre tabindex="0" aria-label="Start command"><code>./textdock</code></pre>
+          <p>Open <code>http://localhost:18257</code> in your browser.</p>
+          <p>Docker and source builds are covered in the <a :href="withBase('/guide/getting-started.html')">installation guide</a>.</p>
+        </section>
+
+        <section aria-labelledby="message-heading">
+          <h2 id="message-heading">Send a test message</h2>
+          <pre tabindex="0" aria-label="Example SMS request"><code>curl http://localhost:18257/api/v1/messages \
   -H 'Content-Type: application/json' \
-  -d '{
-    "to": "+12025550123",
-    "from": "Acme",
-    "body": "Your code is 482193"
-  }'</code></pre>
-        <div class="example-result"><span>Result</span><code>captured</code><span>No carrier SMS sent</span></div>
+  -d '{"to":"+12025550123","from":"Acme","body":"Code 482193"}'</code></pre>
+          <p>The message appears in the inbox. Add an authorization header if you enabled a server token.</p>
+          <p>See the <a :href="withBase('/reference/api.html')">HTTP API reference</a> or use the <a :href="withBase('/reference/sdk.html')">Node SDK</a> in your application backend.</p>
+        </section>
+
+        <section aria-labelledby="guides-heading">
+          <h2 id="guides-heading">Documentation</h2>
+          <ul class="guide-list">
+            <li><a :href="withBase('/guide/workflow.html')">Inboxes, search, CLI and backups</a></li>
+            <li><a :href="withBase('/guide/connect.html')">Pair a phone with a read-only inbox</a></li>
+            <li><a :href="withBase('/guide/test-numbers.html')">Test phone numbers and verification codes</a></li>
+            <li><a :href="withBase('/guide/simulation.html')">Simulate delivery and inspect webhooks</a></li>
+            <li><a :href="withBase('/guide/providers.html')">Provider compatibility and SDK configuration</a></li>
+            <li><a :href="withBase('/guide/mobile-and-otp.html')">Native SMS and autofill limitations</a></li>
+          </ul>
+        </section>
       </div>
-    </section>
 
-    <section class="capabilities" aria-labelledby="capabilities-heading">
-      <div class="section-intro"><h2 id="capabilities-heading">Built for the development loop</h2><p>From the first test message to automated end-to-end checks.</p></div>
-      <div class="feature-grid"><article v-for="[title, text, link] in features" :key="title"><h3>{{ title }}</h3><p>{{ text }}</p><a :href="withBase(link + '.html')">Read the guide <span aria-hidden="true">→</span></a></article></div>
-    </section>
-
-    <section class="project-state" aria-labelledby="state-heading">
-      <div><h2 id="state-heading">A working local tool.<br />A larger roadmap.</h2><p>The local inbox, phone pairing, simulation and provider SDK are available today. Integrated SMS relays, device gateways and managed hosting are the next milestones.</p><a :href="withBase('/project/status.html')">See what is ready and what comes next <span aria-hidden="true">→</span></a></div>
-      <dl><div><dt>Run it</dt><dd>Standalone binary or Docker</dd></div><div><dt>Integrate it</dt><dd>HTTP API or Node SDK</dd></div><div><dt>Deploy it</dt><dd>Locally today; hosted service planned</dd></div><div><dt>Contribute</dt><dd>MIT license, public source and release checks</dd></div></dl>
-    </section>
-
-    <section class="home-resources" aria-label="Project resources"><a :href="withBase('/reference/api.html')">API reference</a><a :href="withBase('/project/changelog.html')">Changelog</a><a :href="withBase('/project/contributing.html')">Contribute</a><a href="https://github.com/fless-lab/TextDock/issues">Report an issue</a><a :href="withBase('/fr/projet.html')" lang="fr">Présentation en français</a></section>
+      <aside class="project-aside" aria-label="Project information">
+        <h2>Release</h2>
+        <p class="release-line"><a :href="release.url">{{ release.tag }}</a></p>
+        <ul>
+          <li><a :href="withBase('/downloads.html')">Downloads</a></li>
+          <li><a :href="withBase('/project/changelog.html')">Changelog</a></li>
+          <li><a href="https://github.com/fless-lab/TextDock">Source code</a></li>
+          <li><a href="https://github.com/fless-lab/TextDock/issues">Issues</a></li>
+        </ul>
+        <h2>Project</h2>
+        <ul>
+          <li><a :href="withBase('/project/status.html')">Status and next steps</a></li>
+          <li><a :href="withBase('/project/roadmap.html')">Roadmap</a></li>
+          <li><a :href="withBase('/project/contributing.html')">Contributing</a></li>
+          <li><a :href="withBase('/project/license.html')">MIT license</a></li>
+          <li><a :href="withBase('/fr/projet.html')" lang="fr">Présentation en français</a></li>
+        </ul>
+        <p class="project-note">Pre-1.0 software.<br />Compatibility is documented per provider and operation.</p>
+      </aside>
+    </div>
   </main>
 </template>
