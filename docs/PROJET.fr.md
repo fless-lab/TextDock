@@ -6,6 +6,10 @@ Le principe : une utilisation légère, sans limiter l'ambition fonctionnelle.
 Un binaire ou un conteneur, une UI intégrée, une base locale et un port par défaut
 peu courant : **18257**. L'open source local reste autonome.
 
+**Avancement v0.2 :** l'appairage QR, les sessions mobiles limitées à un
+destinataire/test, les événements en direct et la révocation sont implémentés.
+La v0.1 est publiée sur GitHub avec binaires et image Docker via la CI.
+
 ## Ce que contient la v0.1.0
 
 La capture fonctionne réellement : API JSON, petit sous-ensemble Twilio testé,

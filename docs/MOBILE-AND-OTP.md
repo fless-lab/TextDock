@@ -6,7 +6,7 @@
 |---|---|---|---|---|
 | TextDock phone browser | No | No; select/copy code | Same LAN, server token | v0.1 |
 | OTP API + test runner | No | Test fills application field | A run ID and test integration | v0.1 |
-| Scoped QR phone session | No | No | Pairing flow | Planned v0.2 |
+| Scoped QR phone session | No | No | Pairing flow | v0.2 |
 | Android Emulator SMS injection | Simulated in emulator | Depends on image/API | Android SDK, ADB, emulator | Planned v0.7 |
 | Provider relay | Yes | If receiver/app/browser supports it | Provider credentials, Internet, cost | Planned v0.6 |
 | Android SIM gateway | Yes, on destination phone | If supported | Gateway Android, app, SIM/plan | Planned v0.6–v0.7 |
@@ -23,15 +23,18 @@ Filling a field with a test runner verifies application flow, not telephony.
 TEXTDOCK_TOKEN='your-long-local-token' ./textdock --listen 0.0.0.0:18257
 ```
 
-Open `http://COMPUTER_LAN_IP:18257` on the phone. `localhost` on a phone means the
-phone itself. Enter the token when asked; it remains in that browser tab's
-session storage. This is full shared inbox access, not a scoped paired session.
+Use **Open on phone** in the desktop interface to pair through a QR code. The
+phone gets a read-only credential restricted to the chosen recipient/run.
+See [CONNECT.md](CONNECT.md). `localhost` on a phone means the phone itself.
+Opening the root desktop interface directly and entering its server token is
+still possible, but grants full shared access rather than a restricted session.
 
 The computer's firewall must allow that port and Wi-Fi client isolation must
 be disabled for these devices. HTTP on an untrusted network can expose the token
 and messages; use a trusted LAN or an HTTPS reverse proxy. Clipboard API support
 usually requires a secure context; text/code remains selectable if copy fails.
-The view refreshes while open, not reliably while suspended or screen-locked.
+Live events update the open view; delivery while suspended or screen-locked is
+not guaranteed. A reconnect refreshes the scoped message list.
 
 For Docker LAN use, change the Compose mapping to `18257:18257` and set your own
 token. The shipped Compose file intentionally binds the host port to loopback.

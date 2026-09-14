@@ -51,6 +51,7 @@ type Filter struct {
 // authorization scope before adding a shared PostgreSQL implementation.
 type Repository interface {
 	Save(context.Context, Message) error
+	Get(context.Context, string) (Message, error)
 	List(context.Context, Filter) ([]Message, error)
 	Delete(context.Context, string) (bool, error)
 	Close() error
@@ -58,6 +59,9 @@ type Repository interface {
 
 var ErrInvalid = errors.New("invalid message")
 var phone = regexp.MustCompile(`^\+[1-9][0-9]{6,14}$`)
+
+func ValidRecipient(to string) bool { return phone.MatchString(to) }
+
 var otp = regexp.MustCompile(`(?:^|[^[:alnum:]])([0-9]{4,8})(?:$|[^[:alnum:]])`)
 
 func New(in Input, source string) (Message, error) {

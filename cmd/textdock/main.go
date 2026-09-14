@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -31,6 +32,7 @@ func main() {
 func run() error {
 	addr := flag.String("listen", env("TEXTDOCK_LISTEN", "127.0.0.1:18257"), "HTTP listen address")
 	dbPath := flag.String("db", env("TEXTDOCK_DB", "data/textdock.db"), "SQLite path or :memory:")
+	publicURL := flag.String("public-url", env("TEXTDOCK_PUBLIC_URL", ""), "phone-facing HTTP(S) origin for QR pairing")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 	if *showVersion {
@@ -38,6 +40,15 @@ func run() error {
 		return nil
 	}
 	token := os.Getenv("TEXTDOCK_TOKEN")
+	if *publicURL != "" {
+		u, err := url.Parse(*publicURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
+			return errors.New("public-url must be an HTTP(S) origin without credentials, query or fragment")
+		}
+		if len(token) < 16 {
+			return errors.New("public-url requires TEXTDOCK_TOKEN with at least 16 characters")
+		}
+	}
 	host, _, err := net.SplitHostPort(*addr)
 	if err != nil {
 		return fmt.Errorf("invalid listen address: %w", err)
@@ -57,7 +68,7 @@ func run() error {
 	}
 	defer store.Close()
 	server := &http.Server{
-		Addr: *addr, Handler: (&httpapi.Server{Store: store, Token: token, Version: version, UI: ui.Files()}).Handler(),
+		Addr: *addr, Handler: (&httpapi.Server{Store: store, Devices: store, Token: token, Version: version, UI: ui.Files(), Listen: *addr, PublicURL: *publicURL}).Handler(),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
 		WriteTimeout: 40 * time.Second, IdleTimeout: 60 * time.Second,
 	}

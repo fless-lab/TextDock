@@ -1,11 +1,4 @@
-import {
-  StrictMode,
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+import { StrictMode, useEffect, useRef, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowLeft,
@@ -26,46 +19,14 @@ import {
   Sun,
   Terminal,
   Trash2,
-  X,
 } from "lucide-react";
 import { api, APIError, type Info, type Message } from "./api";
 import "./styles.css";
-
-function Modal({
-  title,
-  close,
-  children,
-}: {
-  title: string;
-  close: () => void;
-  children: ReactNode;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    ref.current?.showModal();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      onCancel={close}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) close();
-      }}
-    >
-      <header className="modal-header">
-        <h2>{title}</h2>
-        <button
-          className="icon-button"
-          onClick={close}
-          aria-label="Close dialog"
-        >
-          <X size={20} />
-        </button>
-      </header>
-      {children}
-    </dialog>
-  );
-}
+import { Modal } from "./components/Modal";
+import { ConnectDialog } from "./components/ConnectDialog";
+import { PhoneApp } from "./PhoneApp";
+import { useLiveEvents } from "./hooks/useLiveEvents";
+import { copyText } from "./clipboard";
 
 function App() {
   const [info, setInfo] = useState<Info>();
@@ -88,6 +49,16 @@ function App() {
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
   );
   const search = useRef<HTMLInputElement>(null);
+  const live = useLiveEvents(
+    info && !locked ? "/api/v1/events" : undefined,
+    sessionStorage.getItem("textdock-token"),
+  );
+  useEffect(() => {
+    if (live.state === "unauthorized") {
+      setLocked(true);
+      setMessages([]);
+    }
+  }, [live.state]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -133,7 +104,6 @@ function App() {
   useEffect(() => {
     if (!info || locked) return;
     let stopped = false;
-    let timer: ReturnType<typeof setTimeout>;
     const controller = new AbortController();
     async function poll() {
       try {
@@ -153,31 +123,25 @@ function App() {
           }
           setError((e as Error).message);
         }
-      } finally {
-        if (!stopped) timer = setTimeout(poll, 2000);
       }
     }
     const debounce = setTimeout(poll, 150);
     return () => {
       stopped = true;
       clearTimeout(debounce);
-      clearTimeout(timer);
       controller.abort();
     };
-  }, [info, locked, query, refresh]);
+  }, [info, locked, query, refresh, live.revision]);
 
   const visible = messages.filter((m) => !otpOnly || m.analysis.otp);
   const current = visible.find((m) => m.id === selected);
 
   async function copy(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setNotice("Copied to clipboard");
-    } catch {
-      setNotice(
-        "Clipboard unavailable on this connection. Select the text to copy it.",
-      );
-    }
+    setNotice(
+      (await copyText(text))
+        ? "Copied to clipboard"
+        : "Select the text to copy it.",
+    );
   }
   async function send(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -339,11 +303,19 @@ function App() {
         <header className="topbar">
           <div className="breadcrumb">Local workspace</div>
           <div className="connection">
-            <span className={error ? "live-dot offline" : "live-dot"} />
+            <span
+              className={
+                error || live.state !== "connected"
+                  ? "live-dot offline"
+                  : "live-dot"
+              }
+            />
             {error
               ? "Connection interrupted"
               : info
-                ? "Connected"
+                ? live.state === "connected"
+                  ? "Connected"
+                  : "Reconnecting…"
                 : "Connecting…"}
           </div>
         </header>
@@ -395,7 +367,8 @@ function App() {
             <kbd>/</kbd>
           </label>
           <span className="toolbar-note">
-            <Radio size={14} /> Auto-refresh · 2s
+            <Radio size={14} />{" "}
+            {live.state === "connected" ? "Live updates" : "Reconnecting…"}
           </span>
         </div>
 
@@ -731,32 +704,7 @@ function App() {
         </Modal>
       )}
       {modal === "connect" && (
-        <Modal title="Open on phone" close={() => setModal(undefined)}>
-          <p className="modal-description">
-            Connect your phone and computer to the same Wi-Fi network.
-          </p>
-          <ol className="steps">
-            <li>
-              Start TextDock with network access and a token:
-              <pre className="code-block">
-                TEXTDOCK_TOKEN='your-long-local-token' textdock --listen
-                0.0.0.0:18257
-              </pre>
-            </li>
-            <li>
-              Open <code>http://YOUR_COMPUTER_IP:18257</code> on your phone.
-            </li>
-            <li>
-              Enter the same token. Incoming messages refresh every two seconds
-              while the page is open.
-            </li>
-          </ol>
-          <p className="callout">
-            This opens the full inbox on a trusted local network. QR pairing and
-            scoped, read-only phone sessions are planned for v0.2. Native SMS
-            delivery is a separate relay feature.
-          </p>
-        </Modal>
+        <ConnectDialog close={() => setModal(undefined)} />
       )}
       {modal === "settings" && (
         <Modal title="Local workspace" close={() => setModal(undefined)}>
@@ -810,8 +758,17 @@ function App() {
   );
 }
 
+// Read the one-use challenge once outside React StrictMode. Never leave it in
+// browser history or send it to the server as a URL parameter.
+const pairingCode = new URLSearchParams(location.hash.slice(1)).get("pair");
+if (pairingCode)
+  history.replaceState(null, "", location.pathname + location.search);
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    {location.pathname === "/phone" ? (
+      <PhoneApp pairingCode={pairingCode} />
+    ) : (
+      <App />
+    )}
   </StrictMode>,
 );

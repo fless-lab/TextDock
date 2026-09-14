@@ -1,8 +1,10 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,14 +18,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fless-lab/TextDock/internal/connect"
+	"github.com/fless-lab/TextDock/internal/events"
 	"github.com/fless-lab/TextDock/internal/message"
 )
 
 type Server struct {
-	Store   message.Repository
-	Token   string
-	Version string
-	UI      fs.FS
+	Store     message.Repository
+	Token     string
+	Version   string
+	UI        fs.FS
+	Devices   connect.Repository
+	Hub       events.Hub
+	Listen    string
+	PublicURL string
 }
 
 func (s *Server) Handler() http.Handler {
@@ -32,8 +40,11 @@ func (s *Server) Handler() http.Handler {
 		writeJSON(w, 200, map[string]string{"status": "ok"})
 	})
 	mux.Handle("/api/", s.authorize(http.HandlerFunc(s.api)))
+	mux.HandleFunc("POST /connect/v1/claim", s.claimPair)
+	mux.HandleFunc("/connect/v1/", s.deviceAPI)
 	mux.Handle("POST /2010-04-01/Accounts/{account}/Messages.json", s.authorize(http.HandlerFunc(s.twilio)))
 	files := http.FileServer(http.FS(s.UI))
+	mux.HandleFunc("GET /phone", func(w http.ResponseWriter, r *http.Request) { r.URL.Path = "/"; files.ServeHTTP(w, r) })
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			w.Header().Set("Allow", "GET, HEAD")
@@ -77,8 +88,14 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) authorize(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A device token never grants desktop access, including on loopback
+		// instances whose desktop API otherwise permits anonymous requests.
+		if strings.HasPrefix(bearer(r), "td_device_") {
+			fail(w, 403, "device credentials cannot access the desktop API")
+			return
+		}
 		if s.Token != "" {
-			got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+			got := bearer(r)
 			if strings.HasPrefix(r.URL.Path, "/2010-04-01/") {
 				_, password, ok := r.BasicAuth()
 				if ok {
@@ -97,6 +114,32 @@ func (s *Server) authorize(next http.Handler) http.Handler {
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case r.Method == "GET" && r.URL.Path == "/api/v1/network":
+		s.network(w, r)
+	case r.Method == "GET" && r.URL.Path == "/api/v1/events":
+		s.stream(w, r, events.Filter{}, time.Time{})
+	case r.Method == "POST" && r.URL.Path == "/api/v1/pairings":
+		s.createPair(w, r)
+	case r.Method == "GET" && r.URL.Path == "/api/v1/devices":
+		devices, err := s.Devices.ListDevices(r.Context())
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+		writeJSON(w, 200, map[string]any{"devices": devices})
+	case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/v1/devices/"):
+		id := strings.TrimPrefix(r.URL.Path, "/api/v1/devices/")
+		ok, err := s.Devices.RevokeDevice(r.Context(), id)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+		if !ok {
+			fail(w, 404, "device not found")
+			return
+		}
+		s.Hub.Revoke(id)
+		w.WriteHeader(204)
 	case r.Method == "GET" && r.URL.Path == "/api/v1/info":
 		writeJSON(w, 200, map[string]any{"name": "TextDock", "version": s.Version, "mode": "capture", "auth_enabled": s.Token != ""})
 	case r.Method == "POST" && r.URL.Path == "/api/v1/messages":
@@ -122,6 +165,15 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 		s.waitOTP(w, r)
 	case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/v1/messages/"):
 		id := strings.TrimPrefix(r.URL.Path, "/api/v1/messages/")
+		m, err := s.Store.Get(r.Context(), id)
+		if errors.Is(err, sql.ErrNoRows) {
+			fail(w, 404, "message not found")
+			return
+		}
+		if err != nil {
+			internalError(w, err)
+			return
+		}
 		ok, err := s.Store.Delete(r.Context(), id)
 		if err != nil {
 			internalError(w, err)
@@ -131,6 +183,7 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 			fail(w, 404, "message not found")
 			return
 		}
+		s.Hub.Changed(m.To, m.RunID)
 		w.WriteHeader(204)
 	default:
 		fail(w, 404, "endpoint not found")
@@ -151,6 +204,7 @@ func (s *Server) capture(w http.ResponseWriter, r *http.Request, in message.Inpu
 		internalError(w, err)
 		return
 	}
+	s.Hub.Changed(m.To, m.RunID)
 	if twilio {
 		sid := fmt.Sprintf("SM%x", sha256.Sum256([]byte(m.ID)))[:34]
 		writeJSON(w, 201, map[string]any{
@@ -270,6 +324,9 @@ func fail(w http.ResponseWriter, code int, text string) {
 }
 
 func internalError(w http.ResponseWriter, err error) {
+	if errors.Is(err, context.Canceled) {
+		return
+	}
 	slog.Error("request failed", "error", err)
 	fail(w, 500, "internal server error")
 }

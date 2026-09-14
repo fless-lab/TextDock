@@ -15,9 +15,11 @@
 cmd/textdock/             Configuration, listener, lifecycle, dependency wiring
 internal/message/        Canonical model, validation, encoding and OTP analysis
 internal/storage/        SQLite repository and version-1 schema
+internal/connect/        Scoped device credentials and pairing repository contract
+internal/events/         Scoped/coalesced invalidation hub
 internal/httpapi/        HTTP boundary, JSON API, Twilio create subset, token auth
 internal/ui/             Embedded production UI assets
-web/src/                 React/TypeScript UI, API client and visual design
+web/src/                 Desktop UI, PhoneApp, components and live-event hook
 web/tests/               Real browser and official provider SDK contract tests
 api/openapi.yaml         Public v1 JSON API contract
 docs/                    Decisions, roadmap, platform constraints, release process
@@ -41,9 +43,11 @@ behavior. A schema-version table records the initial schema. Future migrations
 must be sequential and transactional; merely creating new tables is not a
 migration strategy for subsequent releases.
 
-The frontend has no router because v0.1 has one inbox and modal tasks. Browser
-state handles theme, selection and a session-scoped server token. Polling is
-sequential with cancellation, preventing overlapping/stale search responses.
+The frontend has two entry views: desktop `/` and read-only `/phone`. Browser
+state handles theme, selection and separate desktop/device credentials. A
+fetch-based SSE hook reconnects with bearer headers and invalidates scoped
+queries; every new connection starts with a full resync. Requests are cancelled
+on scope/search changes, preventing stale search responses.
 The API returns at most 200 rows, and the UI displays the newest 100; cursor
 pagination belongs to v0.3. There is no automatic retention in v0.1.
 
@@ -53,7 +57,7 @@ These are architecture decisions, **not empty packages pretending to work**.
 
 | Boundary | Responsibility | First version |
 |---|---|---|
-| `connect` | One-use pair codes, hashed device credentials, scopes, revocation | v0.2 |
+| `connect` | One-use pair codes, hashed device credentials, scopes, revocation | Implemented v0.2 |
 | `events` | Append-only lifecycle timeline, SSE notifications with resync | v0.2–v0.4 |
 | `workspace` | Local projects, inboxes, test runs, scoped access | v0.3 |
 | `simulation` | Seeded scenarios, virtual clock, failure/rate/latency rules | v0.4 |
@@ -90,8 +94,10 @@ The desktop creates an expiring, one-use challenge. QR content uses a URL
 fragment, exchanged for a separate device session after opening the page. The
 server stores only credential hashes, binds sessions to an inbox/recipient scope
 and permits revocation. A paired device receives read-only access by default,
-not the desktop's admin token. Code lifetime, replay and scope enforcement need
-tests. v0.1's manually entered shared token is explicitly not this mechanism.
+not the desktop's admin token. This flow is implemented in v0.2. Code lifetime,
+replay, concurrent claims, stream revocation, restart persistence and scope
+enforcement have automated tests. v0.1's manually entered shared token is
+explicitly not this mechanism.
 
 ### Notifications and connectivity
 

@@ -1,0 +1,44 @@
+import { expect, test } from '@playwright/test';
+
+test('pair a scoped phone, receive live SMS, reconnect, then revoke access', async ({ page, context, request }, testInfo) => {
+  const headers = { Authorization: 'Bearer textdock-e2e-token-only' };
+  const run = `connect-${testInfo.project.name}`;
+  const errors: string[] = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/');
+  await page.getByLabel('Server token').fill('textdock-e2e-token-only');
+  await page.getByRole('button', { name: 'Unlock inbox' }).click();
+  await page.getByRole('button', { name: 'Open on phone' }).click();
+  await page.getByLabel('Test run', { exact: false }).fill(run);
+  await page.getByRole('button', { name: 'Create pairing code' }).click();
+  const link = await page.getByLabel('Pairing link').inputValue();
+  expect(link).toContain('/phone#pair=');
+  expect(link).not.toContain('textdock-e2e-token-only');
+  await expect(page.locator('.pairing-qr svg')).toBeVisible();
+  const phone = await context.newPage();
+  phone.on('pageerror', e => errors.push(e.message));
+  await phone.goto(link);
+  await expect(phone).toHaveURL(/\/phone$/);
+  await phone.getByRole('textbox', { name: 'Device name' }).fill(`Phone ${run}`);
+  await phone.getByRole('button', { name: 'Connect phone' }).click();
+  await expect(phone.getByText('Waiting for messages to this number.')).toBeVisible();
+  await expect(phone.getByText('Live', { exact: true })).toBeVisible();
+  await request.post('/api/v1/messages', { headers, data: { to: '+33612345678', from: 'Acme', body: 'Do not leak this private message', run_id: 'private-run' } });
+  await request.post('/api/v1/messages', { headers, data: { to: '+33612345678', from: 'Acme', body: 'Phone verification 837492', run_id: run } });
+  await expect(phone.locator('.phone-message p')).toHaveText('Phone verification 837492');
+  await expect(phone.getByText('Do not leak this private message')).not.toBeVisible();
+  const token = await phone.evaluate(() => localStorage.getItem('textdock-device-token'));
+  const forbidden = await request.get('/api/v1/messages', { headers: { Authorization: `Bearer ${token}` } });
+  expect(forbidden.status()).toBe(403);
+  // Browser reload verifies persisted session and stream full resynchronization.
+  await phone.reload();
+  await expect(phone.locator('.phone-code strong')).toHaveText('837492');
+  await phone.screenshot({ path: testInfo.outputPath('paired-phone.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Refresh devices' }).click();
+  const row = page.locator('.device-list li').filter({ hasText: `Phone ${run}` });
+  await row.getByRole('button', { name: 'Revoke' }).click();
+  await expect(phone.getByRole('alert')).toContainText('This session has ended');
+  await expect(phone.locator('.phone-message')).toHaveCount(0);
+  expect(errors).toEqual([]);
+  await phone.close();
+});

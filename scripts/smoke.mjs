@@ -4,7 +4,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const binary = new URL('../bin/textdock', import.meta.url).pathname;
+const binary = process.env.TEXTDOCK_BIN || new URL('../bin/textdock', import.meta.url).pathname;
 const env = { ...process.env, TEXTDOCK_LISTEN: '', TEXTDOCK_DB: '', TEXTDOCK_TOKEN: '' };
 const server = spawn(binary, ['--db', ':memory:'], { env, stdio: ['ignore', 'ignore', 'pipe'] });
 let logs = '';

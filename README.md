@@ -70,18 +70,21 @@ The OTP endpoint returns `{"code":"482193","message_id":"msg_…"}`. The
 application remains responsible for generating, expiring and verifying codes.
 Extraction is a heuristic for 4–8 digit candidates, not an authentication service.
 
-## Available in v0.1.0
+## Available in v0.2.0
 
 - Persistent SQLite inbox and responsive desktop/phone UI, light and dark themes.
 - JSON capture API, search, recipient/run/time filters, per-message JSON export
-  and deletion. Inbox refreshes every two seconds; latest 100 messages shown.
+  and deletion. Live updates via SSE; latest 100 messages shown.
 - GSM-7/UTF-16 analysis, estimated segments and detected OTP copy action.
 - A bounded OTP wait endpoint for automated tests, isolated by recipient/run ID.
 - A small, tested Twilio Messages create subset (`To`, `From`, `Body`).
 - LAN access using a shared server token. This grants full inbox access.
+- QR pairing with expiring one-use links, read-only recipient/run-scoped phone
+  sessions, persistent mobile login and immediate revocation.
+- Dedicated phone view, LAN address suggestions and configurable public origin.
 - Binaries and Docker release workflow, automated API and browser checks.
 
-**Not yet implemented:** scoped QR pairing, push notifications, lifecycle
+**Not yet implemented:** push notifications, lifecycle
 simulation/webhooks, real SMS relays, provider-neutral production SDKs and hosted
 accounts. See the version-by-version [roadmap](docs/ROADMAP.md).
 
@@ -91,6 +94,7 @@ accounts. See the version-by-version [roadmap](docs/ROADMAP.md).
 |---|---|---|
 | `--listen` | `TEXTDOCK_LISTEN` | `127.0.0.1:18257` |
 | `--db` | `TEXTDOCK_DB` | `data/textdock.db` |
+| `--public-url` | `TEXTDOCK_PUBLIC_URL` | Optional phone-facing HTTP(S) origin |
 | — | `TEXTDOCK_TOKEN` | Empty on loopback; 16+ characters required for network binding |
 | `--version` | — | Print build version |
 
@@ -105,9 +109,12 @@ For the same-Wi-Fi phone interface:
 TEXTDOCK_TOKEN='your-long-local-token' ./textdock --listen 0.0.0.0:18257
 ```
 
-Open `http://YOUR_COMPUTER_IP:18257` on your phone and enter the token. This is a
-browser inbox, not delivery into the native SMS app. Use trusted LANs for HTTP;
-remote access needs HTTPS. Details: [mobile and autofill](docs/MOBILE-AND-OTP.md).
+On the desktop, open **Open on phone**, select a recipient, then create and scan
+the pairing QR code. The phone receives a separate read-only credential; the
+desktop token is never included in the QR. Revoke devices from the same dialog.
+For Docker/HTTPS, set `TEXTDOCK_PUBLIC_URL` to the phone-facing server origin.
+This is a browser inbox, not delivery into the native SMS app. Use trusted LANs
+for HTTP; remote access needs HTTPS. Details: [mobile and autofill](docs/MOBILE-AND-OTP.md).
 
 ## Documentation
 
@@ -115,6 +122,7 @@ remote access needs HTTPS. Details: [mobile and autofill](docs/MOBILE-AND-OTP.md
 - [UI design direction](docs/UI.md)
 - [Versioned roadmap and acceptance criteria](docs/ROADMAP.md)
 - [Mobile, native SMS, WebOTP and Android/iOS](docs/MOBILE-AND-OTP.md)
+- [Phone pairing and live connections](docs/CONNECT.md)
 - [API and compatibility](docs/API.md) · [OpenAPI](api/openapi.yaml)
 - [Release process](docs/RELEASING.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)

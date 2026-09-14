@@ -6,6 +6,10 @@ all `/api/` endpoints require `Authorization: Bearer <TEXTDOCK_TOKEN>`.
 remain protected when authentication is enabled. CORS is not enabled: call from
 your backend/test runner or the same-origin UI.
 
+v0.2 adds desktop pairing/device administration and separate scoped phone APIs.
+See [CONNECT.md](CONNECT.md) and [connection OpenAPI](../api/connect.openapi.yaml).
+The phone bearer credential does not authorize any `/api/` request.
+
 ## JSON API
 
 | Method | Route | Result |

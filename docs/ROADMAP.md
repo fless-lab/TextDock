@@ -4,7 +4,7 @@ Each minor version is one useful, tested user journey. Make focused commits
 during development, then one annotated tag only after the acceptance criteria
 and release checks pass. Planned features below are not implemented by scaffolding.
 
-## v0.1.0 — Local capture foundation
+## v0.1.0 — Local capture foundation (released)
 
 Scope: embedded responsive inbox, SQLite, JSON capture/search/delete, encoding
 inspection, OTP extraction/wait API, explicit Twilio create subset, LAN shared
@@ -15,7 +15,7 @@ inspect the OTP on desktop/mobile browser, isolate a test run, restart without
 losing messages, reject unsupported provider options. Automated tests cover these
 core paths; physical-device and hosted release checks are recorded separately.
 
-## v0.2.0 — Connect your phone
+## v0.2.0 — Connect your phone (implemented)
 
 - LAN address discovery, copyable connection URL and QR pairing.
 - Single-use/expiring pairing challenges, scoped read-only device sessions,

@@ -1,0 +1,177 @@
+openapi: 3.1.0
+info:
+  title: TextDock phone connection API
+  version: 0.2.0
+  description: One-use pairing, scoped read-only device sessions and invalidation streams.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/network:
+    get:
+      operationId: getNetworkAddresses
+      summary: Suggest phone-facing server addresses (desktop access)
+      responses:
+        '200':
+          description: LAN configuration and suggested origins
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lan_enabled: { type: boolean }
+                  urls: { type: array, items: { type: string, format: uri } }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/pairings:
+    post:
+      operationId: createPhonePairing
+      summary: Create a two-minute one-use challenge (desktop access)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Scope' }
+      responses:
+        '201':
+          description: Place code in the fragment of a /phone URL, not a query string.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string }
+                  expires_at: { type: string, format: date-time }
+                  scope: { $ref: '#/components/schemas/Scope' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/devices:
+    get:
+      operationId: listDevices
+      summary: List the latest 200 devices (desktop access)
+      responses:
+        '200':
+          description: Device metadata without token hashes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devices: { type: array, items: { $ref: '#/components/schemas/Device' } }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/devices/{id}:
+    delete:
+      operationId: revokeDevice
+      summary: Revoke a session and close its live stream (desktop access)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Device revoked }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/v1/events:
+    get:
+      operationId: desktopEvents
+      summary: Subscribe to desktop invalidations
+      responses:
+        '200': { $ref: '#/components/responses/Stream' }
+        '401': { $ref: '#/components/responses/Error' }
+  /connect/v1/claim:
+    post:
+      operationId: claimPhonePairing
+      summary: Exchange a one-use code for a device credential
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              additionalProperties: false
+              properties:
+                code: { type: string, maxLength: 128 }
+                name: { type: string, minLength: 1, maxLength: 64 }
+      responses:
+        '201':
+          description: The device token is returned only here; store it on the paired device.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  device: { $ref: '#/components/schemas/Device' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /connect/v1/session:
+    get:
+      operationId: getDeviceSession
+      summary: Get the current device and its scope
+      responses:
+        '200':
+          description: Current device
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+        '401': { $ref: '#/components/responses/Error' }
+  /connect/v1/messages:
+    get:
+      operationId: listDeviceMessages
+      summary: List messages within the device's recipient and optional run scope
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 100 } }
+      responses:
+        '200':
+          description: Scoped message list, using the main capture API message schema
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages: { type: array, items: { $ref: './openapi.yaml#/components/schemas/Message' } }
+                  limit: { type: integer }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /connect/v1/events:
+    get:
+      operationId: deviceEvents
+      summary: Subscribe to scoped invalidations and session revocation
+      responses:
+        '200': { $ref: '#/components/responses/Stream' }
+        '401': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  responses:
+    Stream:
+      description: SSE named sync, heartbeat or revoked. Each data field is an empty JSON object. Sync immediately on connection; reread messages after sync. No credentials or message bodies are broadcast.
+      content:
+        text/event-stream:
+          schema: { type: string }
+    Error:
+      description: Request failed; inspect HTTP status and error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+  schemas:
+    Scope:
+      type: object
+      required: [to]
+      additionalProperties: false
+      properties:
+        to: { type: string, pattern: '^\+[1-9][0-9]{6,14}$' }
+        run_id: { type: string, description: Optional exact run restriction (128 bytes max) }
+    Device:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        scope: { $ref: '#/components/schemas/Scope' }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        revoked: { type: boolean }

@@ -34,7 +34,12 @@ func Open(path string) (*SQLite, error) {
 		db.Close()
 		return nil, fmt.Errorf("initialize database: %w", err)
 	}
-	return &SQLite{db: db}, nil
+	s := &SQLite{db: db}
+	if err := s.migrateConnect(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("migrate database: %w", err)
+	}
+	return s, nil
 }
 
 // Fixed-width UTC timestamps preserve chronological ordering in SQLite TEXT.
@@ -86,6 +91,17 @@ func (s *SQLite) Delete(ctx context.Context, id string) (bool, error) {
 	}
 	n, err := r.RowsAffected()
 	return n > 0, err
+}
+
+func (s *SQLite) Get(ctx context.Context, id string) (message.Message, error) {
+	var data string
+	var m message.Message
+	err := s.db.QueryRowContext(ctx, `SELECT payload FROM messages WHERE id = ?`, id).Scan(&data)
+	if err != nil {
+		return m, err
+	}
+	err = json.Unmarshal([]byte(data), &m)
+	return m, err
 }
 
 func (s *SQLite) Close() error { return s.db.Close() }

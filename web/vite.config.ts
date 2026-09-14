@@ -4,5 +4,5 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: { outDir: '../internal/ui/dist', emptyOutDir: true },
-  server: { proxy: { '/api': 'http://127.0.0.1:18257' } },
+  server: { proxy: { '/api': 'http://127.0.0.1:18257', '/connect': 'http://127.0.0.1:18257' } },
 });
