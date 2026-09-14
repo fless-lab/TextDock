@@ -1,5 +1,11 @@
 # TextDock : vision et point de départ
 
+**v0.6 en bêta :** relais intégré Twilio, passerelle Android avec APK de
+développement, clés d'idempotence, limites d'envoi, expiration et reçus signés.
+La compilation et les tests de protocole sont vérifiés ; réception réelle et
+autocomplétion restent à valider sur des téléphones physiques. Le site stable
+reste sur v0.5.2 avec une présentation technique et des polices Arial/Helvetica.
+
 **Un Mailpit du SMS aujourd'hui, un service d'équipe hébergé demain.**
 
 Le principe : une utilisation légère, sans limiter l'ambition fonctionnelle.

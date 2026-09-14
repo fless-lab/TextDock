@@ -15,6 +15,16 @@
   color: var(--text);
   background: var(--bg);
 }
+@media (max-width: 680px) {
+  .sidebar nav {
+    overflow-x: auto;
+    min-width: 0;
+    justify-content: flex-start !important;
+  }
+  .sidebar nav .nav-item {
+    flex-shrink: 0;
+  }
+}
 .event-view h3 {
   font-size: 13px;
   font-weight: 550;

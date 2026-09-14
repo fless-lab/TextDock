@@ -1,7 +1,7 @@
 export interface Message {
   id: string;
   inbox: string;
-  mode: "capture" | "simulate";
+  mode: "capture" | "simulate" | "relay";
   direction: "outbound" | "inbound";
   favorite: boolean;
   tags: string[];

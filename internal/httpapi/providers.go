@@ -19,7 +19,7 @@ func (s *Server) providerAuthorized(w http.ResponseWriter, r *http.Request, cred
 	if token := bearer(r); token != "" {
 		credential = token
 	}
-	if strings.HasPrefix(credential, "td_device_") {
+	if strings.HasPrefix(credential, "td_device_") || strings.HasPrefix(credential, "td_gateway_") {
 		fail(w, 403, "paired devices cannot send messages")
 		return false
 	}

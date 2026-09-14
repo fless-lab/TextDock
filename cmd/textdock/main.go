@@ -20,6 +20,7 @@ import (
 	"github.com/fless-lab/TextDock/internal/cli"
 	"github.com/fless-lab/TextDock/internal/config"
 	"github.com/fless-lab/TextDock/internal/httpapi"
+	"github.com/fless-lab/TextDock/internal/relay"
 	"github.com/fless-lab/TextDock/internal/simulation"
 	"github.com/fless-lab/TextDock/internal/storage"
 	"github.com/fless-lab/TextDock/internal/ui"
@@ -111,7 +112,12 @@ func run() error {
 		return err
 	}
 	defer store.Close()
-	api := &httpapi.Server{Store: store, Devices: store, Workspaces: store, Simulation: store, WebhookSecret: os.Getenv("TEXTDOCK_WEBHOOK_SECRET"), Token: token, Version: version, UI: ui.Files(), Listen: *addr, PublicURL: *publicURL, OTPPattern: otpRegex}
+	relayConfig, err := relay.FromEnv(*publicURL)
+	if err != nil {
+		return err
+	}
+	relayService := &relay.Service{Store: store, Config: relayConfig}
+	api := &httpapi.Server{Store: store, Devices: store, Workspaces: store, Simulation: store, Relay: relayService, WebhookSecret: os.Getenv("TEXTDOCK_WEBHOOK_SECRET"), Token: token, Version: version, UI: ui.Files(), Listen: *addr, PublicURL: *publicURL, OTPPattern: otpRegex}
 	server := &http.Server{
 		Addr: *addr, Handler: api.Handler(),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
@@ -129,6 +135,12 @@ func run() error {
 		(simulation.Worker{Store: store, Secret: api.WebhookSecret, Changed: api.Hub.Changed}).Run(ctx)
 	}()
 	defer func() { stop(); <-workerDone }()
+	relayDone := make(chan struct{})
+	go func() {
+		defer close(relayDone)
+		(relay.Worker{Store: store, Config: relayConfig, Changed: api.Hub.Changed, Resync: api.Hub.Resync}).Run(ctx)
+	}()
+	defer func() { stop(); <-relayDone }()
 	if *retention > 0 {
 		go func() {
 			ticker := time.NewTicker(time.Minute)

@@ -9,4 +9,5 @@ web/playwright-report
 internal/ui/dist
 .env
 site
+android
 *.db*

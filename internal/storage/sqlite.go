@@ -96,6 +96,10 @@ func Open(path string) (*SQLite, error) {
 		cleanup()
 		return nil, err
 	}
+	if err := s.migrateRelay(); err != nil {
+		cleanup()
+		return nil, err
+	}
 	return s, nil
 }
 

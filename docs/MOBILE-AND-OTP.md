@@ -8,14 +8,18 @@
 | OTP API + test runner | No | Test fills application field | A run ID and test integration | v0.1 |
 | Scoped QR phone session | No | No | Pairing flow | v0.2 |
 | Android Emulator SMS injection | Simulated in emulator | Depends on image/API | Android SDK, ADB, emulator | Planned v0.7 |
-| Provider relay | Yes | If receiver/app/browser supports it | Provider credentials, Internet, cost | Planned v0.6 |
-| Android SIM gateway | Yes, on destination phone | If supported | Gateway Android, app, SIM/plan | Planned v0.6–v0.7 |
+| Provider relay | Real-send implementation; device validation pending | If receiver/app/browser supports it | Provider credentials, Internet, cost | v0.6 beta |
+| Android SIM gateway | Real-send implementation; device validation pending | If supported | Gateway Android, app, SIM/plan | v0.6 beta |
 | USB cellular modem | Yes, on destination phone | If supported | Compatible modem, SIM/plan | Planned v0.7 |
 | PWA push notification | No | No | HTTPS, permission, push infrastructure | Planned v0.7 |
 
 A captured message cannot be written by a website into iOS or Android's native
 SMS inbox. Reading a message in TextDock does not trigger OS SMS detection.
 Filling a field with a test runner verifies application flow, not telephony.
+
+The current relay preview is described in [RELAY.md](RELAY.md), with a
+[development Android companion](../android/README.md). The APK builds and protocol
+tests pass, but physical receipt/autofill has not yet been verified.
 
 ## Same-Wi-Fi inbox today
 

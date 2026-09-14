@@ -122,8 +122,12 @@ jobs:
           path: dist/*.tgz
           if-no-files-found: error
 
+  android:
+    needs: checks
+    uses: ./.github/workflows/android.yml
+
   publish:
-    needs: [binaries, container, sdk]
+    needs: [binaries, container, sdk, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -134,11 +138,16 @@ jobs:
           pattern: textdock-*
           merge-multiple: true
           path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-gateway-apk
+          path: dist
       - name: Checksums and GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          (cd dist && sha256sum *.tar.gz *.zip *.tgz > SHA256SUMS)
+          mv dist/app-debug.apk "dist/textdock-gateway-${GITHUB_REF_NAME}.apk"
+          (cd dist && sha256sum *.tar.gz *.zip *.tgz *.apk > SHA256SUMS)
           flags=()
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags+=(--prerelease); fi
           gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "TextDock $GITHUB_REF_NAME" "${flags[@]}"

@@ -24,6 +24,7 @@ reporting and fill in maintainer/project contact details before public launch.
 2. Update `VERSION`, `web/package.json`, `site/package.json`, both lockfile root
    versions, `packages/sdk/package.json` and OpenAPI info;
    move Unreleased notes into a dated `CHANGELOG.md` section.
+   Also update Android `versionName` and increment `versionCode` as appropriate.
 3. Validate locally:
 
    ```sh
@@ -68,6 +69,7 @@ must be inspected before retrying a partially completed publication.
    Windows amd64. Archive with license, README and changelog.
 4. Build/push the Linux amd64/arm64 container image to GHCR.
 5. Package the Node SDK as `textdock-sdk-X.Y.Z.tgz`, with source, types and license.
+   Build/lint the Android development companion and include its APK in checksums.
 6. After artifact/image/SDK success, publish GitHub Release with SHA256SUMS and
     generated notes. A hyphenated version is marked prerelease.
 7. Deploy the tested Pages artifact for the latest stable release. The shared

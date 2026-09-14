@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 export class SMSError extends Error {
   constructor(message, { provider, status, code, retryAfter, uncertain = false } = {}) {
@@ -54,9 +54,10 @@ export function createSMS(options = {}) {
       if (!/^\+[1-9][0-9]{6,14}$/.test(input.to || '') || !input.from?.trim() || !input.body?.trim()) throw new TypeError('to must be E.164-shaped; from and body are required');
       if ([...input.body].length > 4096) throw new TypeError('body exceeds 4096 characters');
       if (provider === 'local') {
+        const mode = input.mode || options.mode;
         const data = await request(`${base}/api/v1/messages`, {
           method: 'POST', headers: { 'Content-Type': 'application/json', ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}) },
-          body: JSON.stringify({ to: input.to, from: input.from, body: input.body, inbox: options.inbox || 'local', run_id: input.runId || '', scenario_id: input.scenarioId || options.scenarioId || '', callback_url: input.callbackURL || '' }),
+          body: JSON.stringify({ to: input.to, from: input.from, body: input.body, inbox: options.inbox || 'local', run_id: input.runId || '', scenario_id: input.scenarioId || options.scenarioId || '', callback_url: input.callbackURL || '', ...(mode ? { mode } : {}), ...(mode === 'relay' ? { idempotency_key: input.idempotencyKey || randomUUID() } : {}) }),
         }, input.signal);
         if (typeof data.id !== 'string' || typeof data.status !== 'string') throw new SMSError('TextDock returned an incomplete message result', { provider, uncertain: true });
         return { id: data.id, status: data.status, provider };
@@ -99,6 +100,7 @@ export function fromEnv(env = process.env) {
   return createSMS({
     driver: env.SMS_DRIVER || 'local', baseURL: env.SMS_ENDPOINT || ((env.SMS_DRIVER || 'local') === 'local' ? env.TEXTDOCK_URL : undefined),
     token: env.TEXTDOCK_TOKEN, inbox: env.TEXTDOCK_INBOX, scenarioId: env.TEXTDOCK_SCENARIO,
+    mode: env.TEXTDOCK_MODE,
     accountSid: env.TWILIO_ACCOUNT_SID, authToken: env.TWILIO_AUTH_TOKEN,
     apiKey: env.VONAGE_API_KEY, apiSecret: env.VONAGE_API_SECRET,
     appKey: env.OVH_APP_KEY, appSecret: env.OVH_APP_SECRET, consumerKey: env.OVH_CONSUMER_KEY, service: env.OVH_SMS_SERVICE,

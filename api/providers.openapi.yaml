@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock provider capture subsets
-  version: 0.5.2
+  version: 0.6.0-beta.1
   description: Local capture subsets only. Provider-shaped authentication uses the local TextDock token; real vendor credentials are not validated.
   license: { name: MIT, identifier: MIT }
 servers:

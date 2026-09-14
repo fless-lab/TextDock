@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fless-lab/TextDock/internal/message"
+	"github.com/fless-lab/TextDock/internal/relay"
 	"github.com/fless-lab/TextDock/internal/simulation"
 )
 
@@ -27,9 +28,13 @@ type Capture struct {
 	Simulation simulation.Repository
 	OTPPattern *regexp.Regexp
 	Changed    func(string, string, string)
+	Relay      *relay.Service
 }
 
 func (s Capture) Send(ctx context.Context, in message.Input, source string) (message.Message, error) {
+	if in.Mode == "relay" && (in.ScenarioID != "" || in.Direction == "inbound" || in.CallbackURL != "") {
+		return message.Message{}, invalid("relay cannot use a simulation scenario, inbound direction or arbitrary callback URL")
+	}
 	m, err := message.New(in, source)
 	if err != nil {
 		return m, err
@@ -39,6 +44,16 @@ func (s Capture) Send(ctx context.Context, in message.Input, source string) (mes
 		if match := s.OTPPattern.FindStringSubmatch(m.Body); len(match) > 1 && len(match[1]) <= 64 {
 			m.Analysis.OTP = match[1]
 		}
+	}
+	if m.Mode == "relay" {
+		if s.Relay == nil || s.Relay.Config.Driver == "" {
+			return m, invalid("real SMS relay is disabled")
+		}
+		m, err = s.Relay.Queue(ctx, m)
+		if err == nil && s.Changed != nil {
+			s.Changed(m.Inbox, m.To, m.RunID)
+		}
+		return m, err
 	}
 	if in.ScenarioID != "" {
 		m.Mode = "simulate"

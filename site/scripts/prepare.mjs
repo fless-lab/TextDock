@@ -15,6 +15,8 @@ const routes = new Map(Object.entries({
   'docs/CONNECT.md': 'guide/connect.md',
   'docs/SIMULATION.md': 'guide/simulation.md',
   'docs/PROVIDERS.md': 'guide/providers.md',
+  'docs/RELAY.md': 'guide/relay.md',
+  'android/README.md': 'reference/android-gateway.md',
   'docs/MOBILE-AND-OTP.md': 'guide/mobile-and-otp.md',
   'docs/API.md': 'reference/api.md',
   'docs/ARCHITECTURE.md': 'reference/architecture.md',

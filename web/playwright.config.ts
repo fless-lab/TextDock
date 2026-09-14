@@ -10,7 +10,7 @@ export default defineConfig({
   webServer: {
     command: '../bin/textdock --listen 127.0.0.1:18258 --db :memory:',
     url: 'http://127.0.0.1:18258/healthz',
-    env: { TEXTDOCK_TOKEN: 'textdock-e2e-token-only', TEXTDOCK_WEBHOOK_SECRET: 'textdock-e2e-webhook-secret' },
+    env: { TEXTDOCK_TOKEN: 'textdock-e2e-token-only', TEXTDOCK_WEBHOOK_SECRET: 'textdock-e2e-webhook-secret', TEXTDOCK_RELAY_DRIVER: 'android' },
     reuseExistingServer: false,
   },
   projects: [

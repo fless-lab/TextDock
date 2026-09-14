@@ -76,13 +76,18 @@ Public GitHub Pages website, versioned downloads, generated documentation,
 local search, accessible phone/desktop layouts and automatic stable-release
 deployment. This is the documentation site, not the future hosted SMS service.
 
-## v0.6.0 — Native SMS relay
+## v0.6.0 — Native SMS relay (beta implementation; hardware validation pending)
 
 - Explicit capture/simulate/relay mode selection, clearly labeled UI.
 - First real provider connector and Android SIM gateway proof of concept.
 - Authenticated gateway enrolment, job leases, receipts and disconnect recovery.
 - Recipient routing, configured sending limits, idempotency/reconciliation.
 - WebOTP body builder and Android Retriever hash format validation.
+
+The `v0.6.0-beta.1` preview includes a built-in Twilio transport, Android gateway
+API/development APK, queue limits/TTL, idempotency and signed receipt handling.
+Build/protocol tests are automated. Stable acceptance below still requires real
+phones, carrier delivery and native autofill checks; it is not implied by the beta.
 
 Acceptance: an actual SMS arrives in a separate test phone's native Messages
 app and a compatible app/browser offers the OTP. Validate on physical hardware;

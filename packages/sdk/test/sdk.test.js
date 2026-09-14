@@ -6,6 +6,17 @@ import { createSMS, fromEnv, SMSError } from '../index.js';
 
 const input = { to: '+33612345678', from: 'Acme', body: 'Your code is 482193', runId: 'test-run' };
 
+test('local relay carries explicit mode and a reusable intent key', async t => {
+  const url = await receiver(t, (req, res, raw) => {
+    const body = JSON.parse(raw);
+    assert.equal(body.mode, 'relay');
+    assert.equal(body.idempotency_key, 'intent-42');
+    res.end(JSON.stringify({ id: 'msg_relay', status: 'queued' }));
+  });
+  const result = await createSMS({ baseURL: url, mode: 'relay' }).send({ ...input, idempotencyKey: 'intent-42' });
+  assert.equal(result.status, 'queued');
+});
+
 async function receiver(t, handler) {
   const server = createServer(async (req, res) => {
     let text = ''; for await (const part of req) text += part;

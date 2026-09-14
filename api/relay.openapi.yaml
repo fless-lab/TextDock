@@ -1,0 +1,196 @@
+openapi: 3.1.0
+info:
+  title: TextDock real SMS relay preview
+  version: 0.6.0-beta.1
+  description: Explicitly enabled real sending, leased Android gateway jobs and signed Twilio receipts. Physical-device behavior remains a prerelease validation task.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/relay:
+    get:
+      operationId: getRelayConfiguration
+      summary: Read non-secret relay configuration (desktop access)
+      responses:
+        '200':
+          description: Driver availability, limits and receipt configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+                  driver: { type: string }
+                  limit_per_minute: { type: integer }
+                  queue_ttl_seconds: { type: integer }
+                  allowed_to: { type: [array, 'null'], items: { type: string } }
+                  receipts_enabled: { type: boolean }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+  /api/v1/messages/{id}/relay:
+    get:
+      operationId: getRelayJob
+      summary: Read dispatch state without gateway lease credentials
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Relay metadata
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+        '404': { $ref: './openapi.yaml#/components/responses/Error' }
+  /api/v1/gateways:
+    get:
+      operationId: listGateways
+      summary: List enrolled Android gateways (desktop access)
+      responses:
+        '200':
+          description: Gateway metadata without tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gateways: { type: array, items: { $ref: '#/components/schemas/Gateway' } }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+    post:
+      operationId: enrollGateway
+      summary: Create a gateway and return its credential once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        '201':
+          description: Thirty-day gateway session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gateway: { $ref: '#/components/schemas/Gateway' }
+                  token: { type: string }
+        '400': { $ref: './openapi.yaml#/components/responses/Error' }
+  /api/v1/gateways/{id}:
+    delete:
+      operationId: revokeGateway
+      summary: Revoke further gateway claims and acknowledgements
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+  /relay/v1/jobs/claim:
+    post:
+      operationId: claimGatewayJob
+      summary: Claim one Android dispatch with a gateway bearer token
+      responses:
+        '200':
+          description: One-time lease; do not repeat a carrier send after interruption
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+        '204': { description: No eligible job or dispatch budget available }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+  /relay/v1/jobs/result:
+    post:
+      operationId: acknowledgeGatewayJob
+      summary: Record a submission result for this gateway's lease
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, lease_token, state]
+              additionalProperties: false
+              properties:
+                id: { type: string }
+                lease_token: { type: string }
+                state: { type: string, enum: [sent, failed, unknown] }
+                error: { type: string, maxLength: 512 }
+      responses:
+        '204': { description: Recorded; identical acknowledgement is idempotent }
+        '409': { $ref: './openapi.yaml#/components/responses/Error' }
+  /relay/twilio/status:
+    post:
+      operationId: receiveTwilioRelayReceipt
+      summary: Accept a signed, correlated Twilio receipt
+      security: []
+      parameters:
+        - { name: message_id, in: query, required: true, schema: { type: string } }
+        - { name: X-Twilio-Signature, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [MessageSid, MessageStatus]
+              properties:
+                MessageSid: { type: string }
+                MessageStatus: { type: string, enum: [queued, accepted, sending, sent, delivered, failed, undelivered] }
+      responses:
+        '204': { description: Receipt recorded or safely ignored as an older state }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+  /api/v1/otp/format:
+    post:
+      operationId: formatNativeOTP
+      summary: Format an application-generated code for WebOTP or Android Retriever
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format, code]
+              properties:
+                format: { type: string, enum: [webotp, android] }
+                code: { type: string, minLength: 4, maxLength: 10 }
+                domain: { type: string }
+                app_hash: { type: string }
+      responses:
+        '200':
+          description: Formatted SMS body, not proof of native autofill
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  body: { type: string }
+        '400': { $ref: './openapi.yaml#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  schemas:
+    Gateway:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        expires_at: { type: string, format: date-time }
+        revoked: { type: boolean }
+    Job:
+      type: object
+      properties:
+        id: { type: string }
+        message_id: { type: string }
+        driver: { type: string, enum: [twilio, android] }
+        state: { type: string, enum: [queued, dispatching, accepted, sent, delivered, failed, unknown, expired] }
+        provider_id: { type: string }
+        owner: { type: string }
+        error: { type: string }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        lease_until: { type: string, format: date-time }
+        lease_token: { type: string, description: Returned only on a gateway claim. }
+        to: { type: string }
+        from: { type: string }
+        body: { type: string }

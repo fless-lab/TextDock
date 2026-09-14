@@ -33,7 +33,8 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	inbox := f.String("inbox", "local", "inbox ID")
 	to := f.String("to", "", "recipient")
 	from := f.String("from", "TextDock", "sender")
-	mode := f.String("mode", "capture", "capture or simulate")
+	mode := f.String("mode", "capture", "capture, simulate or explicitly configured real relay")
+	idempotency := f.String("idempotency-key", "", "stable key for retrying one real relay request")
 	direction := f.String("direction", "outbound", "outbound or inbound")
 	scenario := f.String("scenario", "", "simulation scenario ID")
 	callback := f.String("callback-url", "", "simulation webhook URL")
@@ -124,7 +125,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	q.Set("status", *status)
 	switch command {
 	case "send":
-		data, err = call("POST", "/api/v1/messages", message.Input{Inbox: *inbox, To: *to, From: *from, Body: *body, RunID: *run, Mode: *mode, Direction: *direction, ScenarioID: *scenario, CallbackURL: *callback})
+		data, err = call("POST", "/api/v1/messages", message.Input{Inbox: *inbox, To: *to, From: *from, Body: *body, RunID: *run, Mode: *mode, Direction: *direction, ScenarioID: *scenario, CallbackURL: *callback, IdempotencyKey: *idempotency})
 	case "list":
 		data, err = call("GET", "/api/v1/messages?"+q.Encode(), nil)
 	case "wait":

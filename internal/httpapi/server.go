@@ -23,6 +23,7 @@ import (
 	"github.com/fless-lab/TextDock/internal/connect"
 	"github.com/fless-lab/TextDock/internal/events"
 	"github.com/fless-lab/TextDock/internal/message"
+	"github.com/fless-lab/TextDock/internal/relay"
 	"github.com/fless-lab/TextDock/internal/simulation"
 	"github.com/fless-lab/TextDock/internal/workspace"
 )
@@ -40,6 +41,7 @@ type Server struct {
 	OTPPattern    *regexp.Regexp
 	Simulation    simulation.Repository
 	WebhookSecret string
+	Relay         *relay.Service
 }
 
 func (s *Server) Handler() http.Handler {
@@ -54,6 +56,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /sms/json", s.vonage)
 	mux.HandleFunc("GET /1.0/auth/time", providerTime)
 	mux.HandleFunc("POST /1.0/sms/{service}/jobs", s.ovh)
+	mux.HandleFunc("/relay/v1/", s.gatewayAPI)
+	mux.HandleFunc("POST /relay/twilio/status", s.twilioReceipt)
 	files := http.FileServer(http.FS(s.UI))
 	mux.HandleFunc("GET /phone", func(w http.ResponseWriter, r *http.Request) { r.URL.Path = "/"; files.ServeHTTP(w, r) })
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +105,7 @@ func (s *Server) authorize(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// A device token never grants desktop access, including on loopback
 		// instances whose desktop API otherwise permits anonymous requests.
-		if strings.HasPrefix(bearer(r), "td_device_") {
+		if strings.HasPrefix(bearer(r), "td_device_") || strings.HasPrefix(bearer(r), "td_gateway_") {
 			fail(w, 403, "device credentials cannot access the desktop API")
 			return
 		}
@@ -124,6 +128,9 @@ func (s *Server) authorize(next http.Handler) http.Handler {
 }
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request) {
+	if s.relayAPI(w, r) {
+		return
+	}
 	if s.simulationAPI(w, r) {
 		return
 	}
@@ -131,6 +138,18 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case r.Method == "POST" && r.URL.Path == "/api/v1/otp/format":
+		var in message.OTPFormat
+		if decode(r, &in) != nil {
+			fail(w, 400, "invalid format request")
+			return
+		}
+		body, err := message.FormatOTP(in)
+		if err != nil {
+			fail(w, 400, err.Error())
+			return
+		}
+		writeJSON(w, 200, map[string]string{"body": body})
 	case r.Method == "GET" && r.URL.Path == "/api/v1/network":
 		s.network(w, r)
 	case r.Method == "GET" && r.URL.Path == "/api/v1/events":
@@ -220,7 +239,20 @@ func (s *Server) capture(w http.ResponseWriter, r *http.Request, in message.Inpu
 		fail(w, 400, "inbox does not exist")
 		return
 	}
-	m, err := (application.Capture{Messages: s.Store, Simulation: s.Simulation, OTPPattern: s.OTPPattern, Changed: s.Hub.Changed}).Send(r.Context(), in, source)
+	m, err := (application.Capture{Messages: s.Store, Simulation: s.Simulation, OTPPattern: s.OTPPattern, Changed: s.Hub.Changed, Relay: s.Relay}).Send(r.Context(), in, source)
+	if errors.Is(err, relay.ErrLimit) {
+		w.Header().Set("Retry-After", "60")
+		fail(w, 429, err.Error())
+		return
+	}
+	if errors.Is(err, relay.ErrRecipient) {
+		fail(w, 400, err.Error())
+		return
+	}
+	if errors.Is(err, relay.ErrIdempotency) {
+		fail(w, 409, err.Error())
+		return
+	}
 	var rejected application.Rejected
 	if errors.As(err, &rejected) {
 		w.Header().Set("Retry-After", strconv.Itoa(rejected.RetryAfter))

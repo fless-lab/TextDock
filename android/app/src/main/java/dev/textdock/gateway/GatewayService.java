@@ -50,6 +50,7 @@ public final class GatewayService extends Service {
             int code = connection.getResponseCode();
             if (code == 401 || code == 403) { status("Authorization rejected. Check the server driver and gateway credential."); stopSelf(); throw new Exception("authorization"); }
             if (code == 204) return null;
+            if (code == 409 && path.equals("/relay/v1/jobs/result")) throw new Exception("result_conflict");
             if (code != 200) throw new Exception("Server HTTP " + code);
             try (InputStream input = connection.getInputStream()) {
                 java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream(); byte[] buffer = new byte[4096]; int count;
@@ -91,7 +92,12 @@ public final class GatewayService extends Service {
             }
             try { manager.sendMultipartTextMessage(job.getString("to"), null, parts, sent, null); }
             catch (Exception error) { prefs.edit().putString("phase", "ack").putString("result", "unknown").putString("error", "SMS submission interrupted").commit(); }
-        } catch (Exception error) { if (!"authorization".equals(error.getMessage())) status("Waiting for server: " + error.getMessage()); }
+        } catch (Exception error) {
+            if ("result_conflict".equals(error.getMessage())) {
+                prefs.edit().remove("job").remove("phase").remove("parts").remove("result").remove("error").commit();
+                status("Result no longer accepted by server. Inspect its history; this job will not be resent.");
+            } else if (!"authorization".equals(error.getMessage())) status("Waiting for server: " + error.getMessage());
+        }
     }
     @Override public void onDestroy() { stopping = true; if (executor != null) executor.shutdownNow(); super.onDestroy(); }
     @Override public IBinder onBind(Intent intent) { return null; }

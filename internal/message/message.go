@@ -13,20 +13,21 @@ import (
 )
 
 type Message struct {
-	Mode      string    `json:"mode"`
-	Direction string    `json:"direction"`
-	ID        string    `json:"id"`
-	Inbox     string    `json:"inbox"`
-	Favorite  bool      `json:"favorite"`
-	Tags      []string  `json:"tags"`
-	To        string    `json:"to"`
-	From      string    `json:"from"`
-	Body      string    `json:"body"`
-	RunID     string    `json:"run_id"`
-	Source    string    `json:"source"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	Analysis  Analysis  `json:"analysis"`
+	IdempotencyKey string    `json:"idempotency_key,omitempty"`
+	Mode           string    `json:"mode"`
+	Direction      string    `json:"direction"`
+	ID             string    `json:"id"`
+	Inbox          string    `json:"inbox"`
+	Favorite       bool      `json:"favorite"`
+	Tags           []string  `json:"tags"`
+	To             string    `json:"to"`
+	From           string    `json:"from"`
+	Body           string    `json:"body"`
+	RunID          string    `json:"run_id"`
+	Source         string    `json:"source"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	Analysis       Analysis  `json:"analysis"`
 }
 
 type Analysis struct {
@@ -39,16 +40,17 @@ type Analysis struct {
 }
 
 type Input struct {
-	ForceUnicode bool   `json:"-"`
-	Mode         string `json:"mode,omitempty"`
-	Direction    string `json:"direction,omitempty"`
-	ScenarioID   string `json:"scenario_id,omitempty"`
-	CallbackURL  string `json:"callback_url,omitempty"`
-	Inbox        string `json:"inbox,omitempty"`
-	To           string `json:"to"`
-	From         string `json:"from"`
-	Body         string `json:"body"`
-	RunID        string `json:"run_id,omitempty"`
+	IdempotencyKey string `json:"idempotency_key,omitempty"`
+	ForceUnicode   bool   `json:"-"`
+	Mode           string `json:"mode,omitempty"`
+	Direction      string `json:"direction,omitempty"`
+	ScenarioID     string `json:"scenario_id,omitempty"`
+	CallbackURL    string `json:"callback_url,omitempty"`
+	Inbox          string `json:"inbox,omitempty"`
+	To             string `json:"to"`
+	From           string `json:"from"`
+	Body           string `json:"body"`
+	RunID          string `json:"run_id,omitempty"`
 }
 
 type Filter struct {
@@ -92,10 +94,13 @@ func ValidRecipient(to string) bool { return phone.MatchString(to) }
 var otp = regexp.MustCompile(`(?:^|[^[:alnum:]])([0-9]{4,8})(?:$|[^[:alnum:]])`)
 
 func New(in Input, source string) (Message, error) {
+	if len(in.IdempotencyKey) > 128 {
+		return Message{}, ErrInvalid
+	}
 	if in.Mode == "" {
 		in.Mode = "capture"
 	}
-	if in.Mode != "capture" && in.Mode != "simulate" {
+	if in.Mode != "capture" && in.Mode != "simulate" && in.Mode != "relay" {
 		return Message{}, ErrInvalid
 	}
 	if in.Direction == "" {
@@ -119,7 +124,8 @@ func New(in Input, source string) (Message, error) {
 		analysis = AnalyzeUnicode(in.Body)
 	}
 	return Message{
-		Mode: in.Mode, Direction: in.Direction,
+		IdempotencyKey: in.IdempotencyKey,
+		Mode:           in.Mode, Direction: in.Direction,
 		Inbox: in.Inbox, Tags: []string{},
 		ID: "msg_" + rand.Text(), To: in.To, From: in.From, Body: in.Body,
 		RunID: in.RunID, Source: source, Status: "captured",

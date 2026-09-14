@@ -1,5 +1,6 @@
 export type Driver = 'local' | 'twilio' | 'vonage' | 'ovh';
 export interface SMSOptions {
+  mode?: 'capture' | 'simulate' | 'relay';
   driver?: Driver; baseURL?: string; timeout?: number;
   token?: string; inbox?: string; scenarioId?: string;
   accountSid?: string; authToken?: string;
@@ -7,6 +8,7 @@ export interface SMSOptions {
   appKey?: string; appSecret?: string; consumerKey?: string; service?: string;
 }
 export interface SMSInput {
+  mode?: 'capture' | 'simulate' | 'relay'; idempotencyKey?: string;
   to: string; from: string; body: string;
   runId?: string; scenarioId?: string; callbackURL?: string; signal?: AbortSignal;
 }

@@ -5,6 +5,25 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.6.0-beta.1] - 2026-09-14
+
+### Added
+
+- Explicit, default-disabled real SMS relay with a built-in Go Twilio transport.
+- Persistent dispatch state, idempotency keys, admission/dispatch limits, recipient allowlists and queue TTL.
+- Signed and correlated Twilio receipts; uncertain sends are recorded without automatic retransmission.
+- Android gateway enrolment, hashed credentials, owner-bound leases, revocation and idempotent results.
+- Android development companion APK using the default SIM, foreground service and multipart submission callbacks.
+- Relay UI, gateway management, real-send action labels and dispatch inspection.
+- WebOTP and Android Retriever message-format helpers, CLI and SDK relay options.
+- Tests for opt-in, idempotency conflicts, expiry, quotas, receipt ordering and gateway authorization.
+
+### Prerelease scope
+
+- Android build and lint pass; physical SMS receipt, native autofill, OEM behavior and carrier restrictions still need device testing.
+- The development APK is debug-signed. Stable GitHub Pages remains on v0.5.2.
+- Database schema 5 adds relay state and idempotency tombstones; back up before upgrading.
+
 ## [0.5.2] - 2026-09-14
 
 ### Changed

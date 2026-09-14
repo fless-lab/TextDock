@@ -35,6 +35,11 @@ import { copyText } from "./clipboard";
 import { ScenariosDialog, type Scenario } from "./components/ScenariosDialog";
 import { MessageEvents } from "./components/MessageEvents";
 import {
+  RelayDialog,
+  RelayDetails,
+  type RelayInfo,
+} from "./components/RelayDialog";
+import {
   WorkspacesDialog,
   type Workspaces,
 } from "./components/WorkspacesDialog";
@@ -50,6 +55,12 @@ function App() {
   const [otpOnly, setOtpOnly] = useState(false);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [composeMode, setComposeMode] = useState("capture");
+  const [relay, setRelay] = useState<RelayInfo>({
+    enabled: false,
+    driver: "",
+    limit_per_minute: 10,
+  });
+  const intentKey = useRef("");
   const [inbox, setInbox] = useState("local");
   const [workspaces, setWorkspaces] = useState<Workspaces>({
     projects: [{ id: "default", name: "Local project" }],
@@ -75,6 +86,7 @@ function App() {
     | "workspaces"
     | "commands"
     | "scenarios"
+    | "relay"
   >();
   const [tab, setTab] = useState<"message" | "json" | "events">("message");
   const [busy, setBusy] = useState(false);
@@ -84,6 +96,18 @@ function App() {
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
   );
   const search = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (info && !locked)
+      void api<RelayInfo>("/relay")
+        .then(setRelay)
+        .catch((e) => setError(e.message));
+  }, [info, locked]);
+  useEffect(() => {
+    if (modal === "compose")
+      intentKey.current = Array.from(crypto.getRandomValues(new Uint32Array(4)))
+        .map((n) => n.toString(16))
+        .join("-");
+  }, [modal]);
   useEffect(() => {
     if (info && !locked)
       void api<{ scenarios: Scenario[] }>(
@@ -240,6 +264,9 @@ function App() {
             ...Object.fromEntries(data),
             inbox,
             mode: composeMode === "inbound" ? "simulate" : composeMode,
+            ...(composeMode === "relay"
+              ? { idempotency_key: intentKey.current }
+              : {}),
           }),
         },
       );
@@ -256,7 +283,11 @@ function App() {
       setModal(undefined);
       setRefresh((n) => n + 1);
       setNotice(
-        composeMode === "capture" ? "Message captured." : "Simulation started.",
+        composeMode === "capture"
+          ? "Message captured."
+          : composeMode === "relay"
+            ? "Real SMS queued."
+            : "Simulation started.",
       );
     } catch (e) {
       setError((e as Error).message);
@@ -442,6 +473,10 @@ function App() {
             <FlaskConical size={18} />
             Scenarios
           </button>
+          <button className="nav-item" onClick={() => setModal("relay")}>
+            <Smartphone size={18} />
+            Relay
+          </button>
           <button className="nav-item" onClick={() => setModal("connect")}>
             <Smartphone size={18} />
             Open on phone
@@ -520,7 +555,11 @@ function App() {
                   : "Message inbox"}
               <span>{visible.length}</span>
             </h1>
-            <p>Local messages · No real SMS delivery</p>
+            <p>
+              {relay.enabled
+                ? "Capture, simulation and real SMS relay"
+                : "Local messages · No real SMS delivery"}
+            </p>
           </div>
           <button
             className="primary"
@@ -689,6 +728,11 @@ function App() {
                       </span>
                       <span className="row-body">{m.body}</span>
                       <span className="row-tags">
+                        {m.mode === "relay" && (
+                          <span className="simulation-tag">
+                            real · {m.status}
+                          </span>
+                        )}
                         {m.mode === "simulate" && (
                           <span className="simulation-tag">
                             {m.direction === "inbound" ? "inbound" : m.status}
@@ -841,7 +885,15 @@ function App() {
                 </div>
                 <div className="detail-content">
                   {tab === "events" ? (
-                    <MessageEvents id={current.id} revision={live.revision} />
+                    <>
+                      {current.mode === "relay" && (
+                        <RelayDetails
+                          id={current.id}
+                          revision={live.revision}
+                        />
+                      )}
+                      <MessageEvents id={current.id} revision={live.revision} />
+                    </>
                   ) : tab === "json" ? (
                     <div className="raw-view">
                       <button
@@ -865,10 +917,12 @@ function App() {
                       </div>
                       <div className="sms-bubble">{current.body}</div>
                       <div className="bubble-caption">
-                        {current.mode === "simulate"
-                          ? `Simulated ${current.direction}`
-                          : "Captured locally"}{" "}
-                        · No SMS sent
+                        {current.mode === "relay"
+                          ? `Real SMS relay · ${current.status}`
+                          : current.mode === "simulate"
+                            ? `Simulated ${current.direction}`
+                            : "Captured locally"}
+                        {current.mode !== "relay" && " · No SMS sent"}
                       </div>
                       {current.analysis.otp && (
                         <div className="otp-card">
@@ -931,7 +985,11 @@ function App() {
                         </div>
                         <div>
                           <dt>Delivery</dt>
-                          <dd>Not sent</dd>
+                          <dd>
+                            {current.mode === "relay"
+                              ? current.status
+                              : "Not sent"}
+                          </dd>
                         </div>
                       </dl>
                       <form
@@ -1020,6 +1078,9 @@ function App() {
                 <option value="capture">Capture only</option>
                 <option value="simulate">Simulate delivery</option>
                 <option value="inbound">Simulate incoming SMS</option>
+                <option value="relay" disabled={!relay.enabled}>
+                  Relay — real SMS{!relay.enabled ? " (disabled)" : ""}
+                </option>
               </select>
             </label>
             {composeMode === "simulate" && (
@@ -1042,7 +1103,17 @@ function App() {
                 )}
               </label>
             )}
-            {composeMode !== "capture" && (
+            {composeMode === "relay" && (
+              <p className="modal-description">
+                Real sending through {relay.driver}.{" "}
+                {relay.driver === "android"
+                  ? "The default gateway SIM controls the sender."
+                  : "Use an authorized sender number or ID."}{" "}
+                This request has a reusable idempotency key until submission
+                succeeds.
+              </p>
+            )}
+            {composeMode !== "capture" && composeMode !== "relay" && (
               <label>
                 Callback URL <span className="optional">optional</span>
                 <input
@@ -1110,7 +1181,11 @@ function App() {
               </button>
               <button className="primary" disabled={busy}>
                 <Plus size={16} />
-                {busy ? "Capturing…" : "Capture message"}
+                {busy
+                  ? "Submitting…"
+                  : composeMode === "relay"
+                    ? "Send real SMS"
+                    : "Capture message"}
               </button>
             </div>
           </form>
@@ -1163,6 +1238,9 @@ function App() {
           changed={() => setRefresh((n) => n + 1)}
           close={() => setModal(undefined)}
         />
+      )}
+      {modal === "relay" && (
+        <RelayDialog info={relay} close={() => setModal(undefined)} />
       )}
       {modal === "workspaces" && (
         <WorkspacesDialog

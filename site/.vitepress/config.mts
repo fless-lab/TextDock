@@ -49,6 +49,8 @@ export default defineConfig({
         { text: 'Connect a phone', link: '/guide/connect' },
         { text: 'Delivery simulation', link: '/guide/simulation' },
         { text: 'Providers & production', link: '/guide/providers' },
+        { text: 'Real SMS relay (preview)', link: '/guide/relay' },
+        { text: 'Android gateway', link: '/reference/android-gateway' },
         { text: 'Node SDK', link: '/reference/sdk' },
         { text: 'Native SMS & autofill', link: '/guide/mobile-and-otp' },
       ] },

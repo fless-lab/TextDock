@@ -22,6 +22,8 @@ internal/connect/        Scoped device credentials and pairing repository contra
 internal/events/         Scoped/coalesced invalidation hub
 internal/application/    Provider-neutral capture/simulation orchestration
 internal/simulation/     Scenarios, callback formatting and durable worker
+internal/relay/          Explicit real-send configuration, Twilio transport and dispatch contracts
+android/                 Default-SIM gateway development companion
 internal/httpapi/        HTTP boundary, JSON API, Twilio create subset, token auth
 internal/ui/             Embedded production UI assets
 web/src/                 Desktop UI, PhoneApp, components and live-event hook
@@ -72,8 +74,8 @@ These are architecture decisions, **not empty packages pretending to work**.
 | `simulation` | Seeded scenarios, injected worker clock, rejection/latency rules | Implemented v0.4 |
 | Callback worker | Durable outbox, signing adapters, attempts and replay | Implemented v0.4 |
 | Provider adapters / SDK | Declared request subsets, sender drivers and error normalization | v0.5 subsets |
-| `relay` | Explicit real-send routing, connector jobs and delivery receipts | v0.6 |
-| `devices` | Android gateway enrolment and emulator transport | v0.6–v0.7 |
+| `relay` | Explicit real-send routing, limits, idempotency, uncertainty and signed receipts | v0.6 beta |
+| Gateway API / Android | Enrolment, owner-bound leases and default-SIM submission | v0.6 beta; hardware validation pending |
 | `cloud` | Organizations, identities, tenant-aware services and quotas | v0.9 |
 
 v0.4 extracts capture orchestration into an application service. Transactions
@@ -96,6 +98,14 @@ messages. Unsupported options must fail visibly instead of being dropped.
 Retries are safe only when a connector can deduplicate or reconcile an uncertain
 submission. A timeout is not proof that a real SMS was never sent. Gateway jobs
 need leases, acknowledgements and a durable attempt log before automatic retries.
+
+v0.6's real relay uses a separate dispatch table from simulation callbacks.
+Queued jobs expire; interrupted dispatches become unknown and are never
+automatically requeued. Admission and dispatch both obey per-minute limits.
+Inbox-scoped idempotency keys map to a canonical request fingerprint, retaining
+a tombstone after message deletion. Signed Twilio receipts can resolve uncertain
+jobs and cannot regress terminal delivery states. Android reports submission
+results for its own leased jobs; it cannot browse desktop APIs.
 
 ### Mobile pairing
 

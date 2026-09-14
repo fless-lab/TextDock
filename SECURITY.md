@@ -6,6 +6,13 @@ credentials with enforced recipient/run scope, read-only routes, 30-day expiry
 and immediate revocation. Plain desktop query filters are not access controls.
 Hosted multi-tenant deployment requires the later organization-scoped architecture.
 
+The v0.6 preview adds separately scoped gateway credentials and an opt-in real
+SMS relay. Gateway tokens are stored as hashes, cannot authorize the desktop API,
+and can acknowledge only their own leased jobs. Provider credentials remain in
+server environment variables. Idempotency key fingerprints survive message
+deletion to prevent an old key from creating another carrier send. Uncertain
+dispatches are not automatically retried.
+
 Default binding is loopback. Non-loopback binding requires a token with at least
 16 characters. Same-origin browser checks, bounded request bodies and loopback
 Host validation protect the local API boundary. Tokens are not accepted in query

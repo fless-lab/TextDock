@@ -7,7 +7,7 @@ are included. One send interface, with explicit `local`, `twilio`, `vonage`, or
 Install from the TextDock GitHub Release asset:
 
 ```sh
-npm install https://github.com/fless-lab/TextDock/releases/download/v0.5.2/textdock-sdk-0.5.2.tgz
+npm install https://github.com/fless-lab/TextDock/releases/download/v0.6.0-beta.1/textdock-sdk-0.6.0-beta.1.tgz
 ```
 
 Or install `./packages/sdk` from a source checkout. This package is distributed
@@ -52,6 +52,12 @@ and `signal`. `runId` and `scenarioId` are TextDock-only metadata. Local callbac
 require a selected simulation scenario. Twilio/Vonage accept a per-message
 callback URL; OVH requires service-level callback configuration and rejects this
 option. Only plain text, single-recipient sending is covered.
+
+For the local driver, `mode: 'relay'` (or `TEXTDOCK_MODE=relay`) requests an
+explicitly enabled real relay on the server. Capture is still the default. Pass
+`idempotencyKey` to reuse one send intent across retries. A relay-mode call without
+a supplied key generates one for that call; the SDK does not retry it itself.
+An interrupted carrier send remains uncertain and requires reconciliation.
 
 Vonage chooses GSM-compatible `text` or `unicode` based on message characters.
 OVH requests server time before signing the exact POST body with AK/AS/CK
