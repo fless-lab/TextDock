@@ -21,6 +21,8 @@ type SQLite struct {
 	keeper *sql.DB
 }
 
+const schemaVersion = 6
+
 func Open(path string) (*SQLite, error) {
 	// database/sql can discard a connection after a cancelled transaction.
 	// Keep a named memory database alive independently of the request pool.
@@ -97,6 +99,10 @@ func Open(path string) (*SQLite, error) {
 		return nil, err
 	}
 	if err := s.migrateRelay(); err != nil {
+		cleanup()
+		return nil, err
+	}
+	if err := s.migrateDeviceLab(); err != nil {
 		cleanup()
 		return nil, err
 	}

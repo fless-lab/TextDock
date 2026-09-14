@@ -51,7 +51,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: make setup
-      - run: make check test build
+      - run: make check test build test-tools
       - run: node scripts/smoke.mjs
       - run: npx playwright install --with-deps chromium
         working-directory: web

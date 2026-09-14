@@ -19,6 +19,7 @@ import (
 
 	"github.com/fless-lab/TextDock/internal/cli"
 	"github.com/fless-lab/TextDock/internal/config"
+	"github.com/fless-lab/TextDock/internal/devicelab"
 	"github.com/fless-lab/TextDock/internal/httpapi"
 	"github.com/fless-lab/TextDock/internal/relay"
 	"github.com/fless-lab/TextDock/internal/simulation"
@@ -118,6 +119,11 @@ func run() error {
 	}
 	relayService := &relay.Service{Store: store, Config: relayConfig}
 	api := &httpapi.Server{Store: store, Devices: store, Workspaces: store, Simulation: store, Relay: relayService, WebhookSecret: os.Getenv("TEXTDOCK_WEBHOOK_SECRET"), Token: token, Version: version, UI: ui.Files(), Listen: *addr, PublicURL: *publicURL, OTPPattern: otpRegex}
+	labConfig, err := devicelab.FromEnv()
+	if err != nil {
+		return err
+	}
+	api.Lab = &devicelab.Service{Config: labConfig, Runner: devicelab.Executor{Path: labConfig.Path, Timeout: labConfig.Timeout}, Store: store, Changed: api.Hub.Changed, Resync: api.Hub.Resync}
 	server := &http.Server{
 		Addr: *addr, Handler: api.Handler(),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
@@ -129,6 +135,9 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	labDone := make(chan struct{})
+	go func() { defer close(labDone); api.Lab.Recover(ctx) }()
+	defer func() { stop(); <-labDone }()
 	workerDone := make(chan struct{})
 	go func() {
 		defer close(workerDone)

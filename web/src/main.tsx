@@ -34,6 +34,7 @@ import { useLiveEvents } from "./hooks/useLiveEvents";
 import { copyText } from "./clipboard";
 import { ScenariosDialog, type Scenario } from "./components/ScenariosDialog";
 import { MessageEvents } from "./components/MessageEvents";
+import { DeviceLabDialog } from "./components/DeviceLabDialog";
 import {
   RelayDialog,
   RelayDetails,
@@ -87,6 +88,7 @@ function App() {
     | "commands"
     | "scenarios"
     | "relay"
+    | "device-lab"
   >();
   const [tab, setTab] = useState<"message" | "json" | "events">("message");
   const [busy, setBusy] = useState(false);
@@ -476,6 +478,10 @@ function App() {
           <button className="nav-item" onClick={() => setModal("relay")}>
             <Smartphone size={18} />
             Relay
+          </button>
+          <button className="nav-item" onClick={() => setModal("device-lab")}>
+            <Terminal size={18} />
+            Device lab
           </button>
           <button className="nav-item" onClick={() => setModal("connect")}>
             <Smartphone size={18} />
@@ -1244,6 +1250,13 @@ function App() {
           info={relay}
           version={info?.version}
           close={() => setModal(undefined)}
+        />
+      )}
+      {modal === "device-lab" && (
+        <DeviceLabDialog
+          inbox={inbox}
+          close={() => setModal(undefined)}
+          changed={() => setRefresh((n) => n + 1)}
         />
       )}
       {modal === "workspaces" && (

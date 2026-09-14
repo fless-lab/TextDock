@@ -17,22 +17,28 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fless-lab/TextDock/internal/devicelab"
 	"github.com/fless-lab/TextDock/internal/message"
 	"github.com/fless-lab/TextDock/internal/storage"
 )
 
 func Run(ctx context.Context, args []string, out io.Writer) error {
 	command := args[0]
-	valid := map[string]bool{"send": true, "list": true, "wait": true, "purge": true, "export": true, "backup": true, "restore": true}
+	valid := map[string]bool{"send": true, "list": true, "wait": true, "purge": true, "export": true, "backup": true, "restore": true, "devices": true, "inject": true}
 	if !valid[command] {
-		return errors.New("commands: send, list, wait, purge, export, backup, restore; run with --help for flags")
+		return errors.New("commands: send, list, wait, purge, export, backup, restore, devices, inject; run with --help for flags")
 	}
 	f := flag.NewFlagSet("textdock "+command, flag.ContinueOnError)
 	f.SetOutput(out)
 	base := f.String("url", env("TEXTDOCK_URL", "http://127.0.0.1:18257"), "TextDock server origin")
 	inbox := f.String("inbox", "local", "inbox ID")
 	to := f.String("to", "", "recipient")
-	from := f.String("from", "TextDock", "sender")
+	defaultFrom := "TextDock"
+	if command == "inject" {
+		defaultFrom = "+12025550100"
+	}
+	from := f.String("from", defaultFrom, "sender")
+	serial := f.String("serial", "", "explicit Android emulator serial (inject only)")
 	mode := f.String("mode", "capture", "capture, simulate or explicitly configured real relay")
 	idempotency := f.String("idempotency-key", "", "stable key for retrying one real relay request")
 	direction := f.String("direction", "outbound", "outbound or inbound")
@@ -124,6 +130,24 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	var data []byte
 	q.Set("status", *status)
 	switch command {
+	case "devices":
+		data, err = call("GET", "/api/v1/lab/status", nil)
+	case "inject":
+		data, err = call("POST", "/api/v1/lab/injections", devicelab.Input{Serial: *serial, Inbox: *inbox, To: *to, From: *from, Body: *body, RunID: *run, IdempotencyKey: *idempotency})
+		if err != nil {
+			return err
+		}
+		var result devicelab.Result
+		if err := json.Unmarshal(data, &result); err != nil {
+			return err
+		}
+		if _, err := out.Write(data); err != nil {
+			return err
+		}
+		if result.Injection.Status != "injected" {
+			return fmt.Errorf("emulator injection is %s; inspect message %s before retrying", result.Injection.Status, result.Message.ID)
+		}
+		return nil
 	case "send":
 		data, err = call("POST", "/api/v1/messages", message.Input{Inbox: *inbox, To: *to, From: *from, Body: *body, RunID: *run, Mode: *mode, Direction: *direction, ScenarioID: *scenario, CallbackURL: *callback, IdempotencyKey: *idempotency})
 	case "list":

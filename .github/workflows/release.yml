@@ -126,8 +126,12 @@ jobs:
     needs: checks
     uses: ./.github/workflows/android.yml
 
+  emulator:
+    needs: checks
+    uses: ./.github/workflows/emulator.yml
+
   publish:
-    needs: [binaries, container, sdk, android]
+    needs: [binaries, container, sdk, android, emulator]
     runs-on: ubuntu-latest
     permissions:
       contents: write

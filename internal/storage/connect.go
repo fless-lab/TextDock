@@ -19,7 +19,7 @@ func (s *SQLite) migrateConnect() error {
 	if err := tx.QueryRow(`SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil {
 		return err
 	}
-	if version > 5 {
+	if version > schemaVersion {
 		return errors.New("database schema is newer than this TextDock version")
 	}
 	if version == 1 {

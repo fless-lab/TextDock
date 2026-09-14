@@ -15,6 +15,30 @@
   color: var(--text);
   background: var(--bg);
 }
+.lab-history {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+.lab-history li {
+  display: grid;
+  gap: 5px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.lab-history strong {
+  font-weight: 550;
+}
+.lab-history time,
+.lab-history span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.lab-history code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 680px) {
   .sidebar nav {
     overflow-x: auto;

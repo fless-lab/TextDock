@@ -1,7 +1,7 @@
 GO ?= go
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || cat VERSION)
 
-.PHONY: setup ui build run check test e2e
+.PHONY: setup ui build run check test e2e test-tools
 
 setup:
 	$(GO) mod download
@@ -27,5 +27,9 @@ test:
 	$(GO) test -race -count=1 ./...
 	npm --prefix packages/sdk test
 
-e2e: build
+test-tools:
+	mkdir -p bin
+	$(GO) build -o bin/adb-fixture ./internal/devicelab/testdata/adb
+
+e2e: build test-tools
 	npm --prefix web run test:e2e
