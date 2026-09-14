@@ -51,6 +51,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /connect/v1/claim", s.claimPair)
 	mux.HandleFunc("/connect/v1/", s.deviceAPI)
 	mux.Handle("POST /2010-04-01/Accounts/{account}/Messages.json", s.authorize(http.HandlerFunc(s.twilio)))
+	mux.HandleFunc("POST /sms/json", s.vonage)
+	mux.HandleFunc("GET /1.0/auth/time", providerTime)
+	mux.HandleFunc("POST /1.0/sms/{service}/jobs", s.ovh)
 	files := http.FileServer(http.FS(s.UI))
 	mux.HandleFunc("GET /phone", func(w http.ResponseWriter, r *http.Request) { r.URL.Path = "/"; files.ServeHTTP(w, r) })
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -268,7 +271,7 @@ func (s *Server) twilio(w http.ResponseWriter, r *http.Request) {
 		fail(w, 422, "StatusCallback requires X-TextDock-Scenario")
 		return
 	}
-	s.capture(w, r, message.Input{Inbox: r.Header.Get("X-TextDock-Inbox"), ScenarioID: r.Header.Get("X-TextDock-Scenario"), CallbackURL: r.PostForm.Get("StatusCallback"), To: r.PostForm.Get("To"), From: r.PostForm.Get("From"), Body: r.PostForm.Get("Body")}, "twilio", true)
+	s.capture(w, r, message.Input{Inbox: r.Header.Get("X-TextDock-Inbox"), RunID: r.Header.Get("X-TextDock-Run-ID"), ScenarioID: r.Header.Get("X-TextDock-Scenario"), CallbackURL: r.PostForm.Get("StatusCallback"), To: r.PostForm.Get("To"), From: r.PostForm.Get("From"), Body: r.PostForm.Get("Body")}, "twilio", true)
 }
 
 func filter(r *http.Request) (message.Filter, error) {

@@ -39,15 +39,16 @@ type Analysis struct {
 }
 
 type Input struct {
-	Mode        string `json:"mode,omitempty"`
-	Direction   string `json:"direction,omitempty"`
-	ScenarioID  string `json:"scenario_id,omitempty"`
-	CallbackURL string `json:"callback_url,omitempty"`
-	Inbox       string `json:"inbox,omitempty"`
-	To          string `json:"to"`
-	From        string `json:"from"`
-	Body        string `json:"body"`
-	RunID       string `json:"run_id,omitempty"`
+	ForceUnicode bool   `json:"-"`
+	Mode         string `json:"mode,omitempty"`
+	Direction    string `json:"direction,omitempty"`
+	ScenarioID   string `json:"scenario_id,omitempty"`
+	CallbackURL  string `json:"callback_url,omitempty"`
+	Inbox        string `json:"inbox,omitempty"`
+	To           string `json:"to"`
+	From         string `json:"from"`
+	Body         string `json:"body"`
+	RunID        string `json:"run_id,omitempty"`
 }
 
 type Filter struct {
@@ -113,12 +114,16 @@ func New(in Input, source string) (Message, error) {
 		len(in.RunID) > 128 || !utf8.ValidString(in.Body) {
 		return Message{}, ErrInvalid
 	}
+	analysis := Analyze(in.Body)
+	if in.ForceUnicode {
+		analysis = AnalyzeUnicode(in.Body)
+	}
 	return Message{
 		Mode: in.Mode, Direction: in.Direction,
 		Inbox: in.Inbox, Tags: []string{},
 		ID: "msg_" + rand.Text(), To: in.To, From: in.From, Body: in.Body,
 		RunID: in.RunID, Source: source, Status: "captured",
-		CreatedAt: time.Now().UTC(), Analysis: Analyze(in.Body),
+		CreatedAt: time.Now().UTC(), Analysis: analysis,
 	}, nil
 }
 
@@ -126,6 +131,10 @@ func New(in Input, source string) (Message, error) {
 // Segmentation is an estimate: national language tables/provider rewriting
 // are deliberately not assumed. OTP extraction is a convenience heuristic.
 func Analyze(body string) Analysis {
+	return analyze(body, false)
+}
+func AnalyzeUnicode(body string) Analysis { return analyze(body, true) }
+func analyze(body string, forceUnicode bool) Analysis {
 	const basic = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"
 	const extension = "\f^{}\\[~]|€"
 	a := Analysis{Encoding: "GSM-7", Characters: utf8.RuneCountInString(body)}
@@ -145,6 +154,9 @@ func Analyze(body string) Analysis {
 		}
 	}
 	single, multi := 160, 153
+	if forceUnicode {
+		a.Encoding = "UTF-16"
+	}
 	if a.Encoding == "UTF-16" {
 		a.Units = len(utf16.Encode([]rune(body)))
 		single, multi = 70, 67

@@ -21,9 +21,11 @@ check:
 	test -z "$$($(GO) fmt ./...)"
 	$(GO) vet ./...
 	npm --prefix web run check
+	./web/node_modules/.bin/tsc --noEmit --strict --target ES2022 --module NodeNext --moduleResolution NodeNext --lib ES2022,DOM packages/sdk/test/types.ts
 
 test:
 	$(GO) test -race -count=1 ./...
+	npm --prefix packages/sdk test
 
 e2e: build
 	npm --prefix web run test:e2e

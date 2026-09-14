@@ -33,6 +33,9 @@ server on **18258**, separate from the default development instance.
 The executable smoke test checks the default port **18257**; stop your own
 TextDock instance before running it.
 
+`make test` also runs the dependency-free Node SDK tests; `make check` checks its
+public TypeScript contract. No provider credentials are used by these tests.
+
 ## Design expectations
 
 - Keep domain logic independent of transports and storage.

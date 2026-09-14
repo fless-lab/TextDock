@@ -1135,6 +1135,13 @@ function App() {
             <Copy size={15} />
             Copy example
           </button>
+          <h3>Node.js backend SDK</h3>
+          <pre className="code-block">{`import { fromEnv } from '@textdock/sdk';\nconst sms = fromEnv();\nawait sms.send({\n  to: '+33612345678', from: 'Acme',\n  body: 'Your code is 482193', runId: 'signup-1'\n});`}</pre>
+          <p className="modal-description">
+            Set SMS_DRIVER to local, twilio, vonage or ovh. The SDK is available
+            as a package in the GitHub release; production drivers require
+            provider credentials.
+          </p>
           <h3>Wait for a verification code</h3>
           <pre className="code-block">
             GET /api/v1/otp?to=%2B33612345678&amp;run_id=signup-1&amp;timeout=30

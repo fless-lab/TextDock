@@ -5,6 +5,24 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-14
+
+### Added
+
+- Dependency-free Node ESM SDK with TypeScript declarations and local/Twilio/Vonage/OVH drivers.
+- Environment-based provider switching with one send interface and explicit acceptance semantics.
+- OVH server-time synchronization/request signing and Vonage GSM/Unicode selection.
+- Bounded response handling, normalized provider errors and uncertain-outcome reporting without automatic send retries.
+- Vonage and OVH single-recipient capture adapters with declared compatibility matrices.
+- SDK protocol fixtures and end-to-end tests through all four capture paths.
+- Versioned SDK tarball in GitHub Releases, included in SHA256SUMS.
+
+### Scope
+
+- Provider routes still capture/simulate locally. Non-local SDK drivers can send
+  real SMS when configured with valid credentials; carrier integration was not exercised by CI.
+- No schema migration is required beyond v0.4's schema version 4.
+
 ## [0.4.0] - 2026-09-14
 
 ### Added

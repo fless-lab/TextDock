@@ -1,0 +1,99 @@
+openapi: 3.1.0
+info:
+  title: TextDock provider capture subsets
+  version: 0.5.0
+  description: Local capture subsets only. Provider-shaped authentication uses the local TextDock token; real vendor credentials are not validated.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security: []
+paths:
+  /sms/json:
+    post:
+      operationId: captureVonageSMS
+      summary: Capture one Vonage-shaped text SMS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VonageInput' }
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/VonageInput' }
+      responses:
+        '200':
+          description: Single success result with status zero
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message-count: { type: string, const: '1' }
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        to: { type: string }
+                        message-id: { type: string }
+                        status: { type: string, const: '0' }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+        '422': { $ref: './openapi.yaml#/components/responses/Error' }
+  /1.0/auth/time:
+    get:
+      operationId: getOVHTime
+      summary: Return server time for SDK request signing
+      responses:
+        '200':
+          description: Unix timestamp in seconds
+          content:
+            application/json:
+              schema: { type: integer }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+  /1.0/sms/{service}/jobs:
+    post:
+      operationId: captureOVHJob
+      summary: Capture an OVH-shaped single-recipient SMS job
+      parameters:
+        - { name: service, in: path, required: true, schema: { type: string } }
+        - { name: X-Ovh-Consumer, in: header, schema: { type: string }, description: Local TextDock token when authentication is enabled. }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [receivers, sender, message]
+              additionalProperties: false
+              properties:
+                receivers: { type: array, minItems: 1, maxItems: 1, items: { type: string } }
+                sender: { type: string }
+                message: { type: string }
+                priority: { type: string, enum: [high] }
+                noStopClause: { type: boolean, const: false }
+      responses:
+        '200':
+          description: Captured job; no credits consumed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ids: { type: array, items: { type: integer } }
+                  validReceivers: { type: array, items: { type: string } }
+                  invalidReceivers: { type: array, items: { type: string } }
+                  totalCreditsRemoved: { type: number, const: 0 }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+        '422': { $ref: './openapi.yaml#/components/responses/Error' }
+components:
+  schemas:
+    VonageInput:
+      type: object
+      required: [to, from, text]
+      additionalProperties: false
+      properties:
+        api_key: { type: string }
+        api_secret: { type: string, description: Local TextDock token when authentication is enabled. }
+        to: { type: string }
+        from: { type: string }
+        text: { type: string }
+        type: { type: string, enum: [text, unicode] }

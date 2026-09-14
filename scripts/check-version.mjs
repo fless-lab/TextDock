@@ -8,8 +8,10 @@ const pkg = JSON.parse(readFileSync(new URL('../web/package.json', import.meta.u
 const lock = JSON.parse(readFileSync(new URL('../web/package-lock.json', import.meta.url), 'utf8'));
 const changes = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
 const openapi = readFileSync(new URL('../api/openapi.yaml', import.meta.url), 'utf8');
+const sdk = JSON.parse(readFileSync(new URL('../packages/sdk/package.json', import.meta.url), 'utf8'));
 assert.equal(tag, `v${version}`, 'Tag and VERSION must agree');
 assert.equal(pkg.version, version, 'UI and VERSION must agree');
+assert.equal(sdk.version, version, 'SDK and VERSION must agree');
 assert.equal(lock.version, version, 'Lockfile and VERSION must agree');
 assert.equal(lock.packages[''].version, version, 'Root lock entry must agree');
 assert.ok(changes.includes(`## [${version}]`), 'Release needs a CHANGELOG entry');

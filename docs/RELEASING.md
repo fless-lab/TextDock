@@ -21,7 +21,7 @@ reporting and fill in maintainer/project contact details before public launch.
 ## Cut each subsequent version
 
 1. Complete the version's acceptance criteria in `docs/ROADMAP.md`.
-2. Update `VERSION`, `web/package.json`, lockfile root versions and OpenAPI info;
+2. Update `VERSION`, `web/package.json`, lockfile root versions, `packages/sdk/package.json` and OpenAPI info;
    move Unreleased notes into a dated `CHANGELOG.md` section.
 3. Validate locally:
 
@@ -60,7 +60,8 @@ must be inspected before retrying a partially completed publication.
 3. Cross-compile CGO-free binaries for Linux amd64/arm64, macOS amd64/arm64 and
    Windows amd64. Archive with license, README and changelog.
 4. Build/push the Linux amd64/arm64 container image to GHCR.
-5. After artifact/image success, publish GitHub Release with SHA256SUMS and
+5. Package the Node SDK as `textdock-sdk-X.Y.Z.tgz`, with source, types and license.
+6. After artifact/image/SDK success, publish GitHub Release with SHA256SUMS and
    generated notes. A hyphenated version is marked prerelease.
 
 Checksums detect download corruption; they are not publisher signatures.

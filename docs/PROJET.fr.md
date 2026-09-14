@@ -18,6 +18,11 @@ rétention optionnelle, extraction OTP configurable et vérifications d'accessib
 callbacks signés, retries persistants et inspection/rejeu des tentatives. Les
 versions v0.1, v0.2 et v0.3 sont publiées avec CI verte.
 
+**Avancement v0.5 :** un SDK Node commun permet de choisir local, Twilio, Vonage
+ou OVH par configuration. Les adaptateurs de capture et leurs limites sont
+documentés et testés ; la validation avec comptes fournisseurs réels et téléphone
+physique reste à faire. Le SDK est distribué dans les releases GitHub.
+
 ## Ce que contient la v0.1.0
 
 La capture fonctionne réellement : API JSON, petit sous-ensemble Twilio testé,

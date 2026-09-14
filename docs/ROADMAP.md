@@ -41,7 +41,7 @@ The mobile session cannot delete messages or read another scope.
 Acceptance: repeated parallel tests never pick an earlier run's OTP; browse a
 100k-message fixture without unbounded responses or rendering all rows at once.
 
-## v0.4.0 — Simulate the difficult cases (implemented)
+## v0.4.0 — Simulate the difficult cases (released)
 
 - Durable capture/queue acceptance timeline: queued, sent, delivered, failed, expired.
 - Seeded scenarios by recipient/prefix, delays, invalid numbers, rate limits,
@@ -54,13 +54,17 @@ Acceptance: a saved scenario reproduces the same event sequence; crash/restart
 does not lose scheduled events or webhook attempts. Timeouts and out-of-order
 receipts are testable. Simulation never emits real SMS.
 
-## v0.5.0 — Provider fidelity and production switching
+## v0.5.0 — Provider fidelity and production switching (implemented subsets)
 
 - Expand Twilio compatibility based on versioned contract fixtures.
 - Add OVH and Vonage capture adapters with published support matrices.
 - Provider-neutral sending helper with local and real-provider drivers.
 - Provider error formats, signatures, sender constraints and Unicode behavior.
 - Generated API types/client examples and integration guides by framework.
+
+The first v0.5 release implements the published single-recipient support matrix
+and typed Node SDK. Expanded vendor error schemas, additional SDK languages and
+live credentialed provider/device verification remain follow-up compatibility work.
 
 Acceptance: the same sample application changes configuration between local and
 one real provider; opt-in credentialed smoke tests record what local emulation

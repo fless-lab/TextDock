@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock phone connection API
-  version: 0.4.0
+  version: 0.5.0
   description: One-use pairing, scoped read-only device sessions and invalidation streams.
   license: { name: MIT, identifier: MIT }
 servers:

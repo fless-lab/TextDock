@@ -29,6 +29,7 @@ web/tests/               Real browser and official provider SDK contract tests
 api/openapi.yaml         Public v1 JSON API contract
 docs/                    Decisions, roadmap, platform constraints, release process
 scripts/                 Release metadata validation
+packages/sdk/            Dependency-free Node sender drivers and TypeScript contract
 .github/workflows/       CI and tag-driven binary/container releases
 ```
 
@@ -70,7 +71,7 @@ These are architecture decisions, **not empty packages pretending to work**.
 | `workspace` | Local projects, inboxes, test runs, scoped access | Implemented v0.3 |
 | `simulation` | Seeded scenarios, injected worker clock, rejection/latency rules | Implemented v0.4 |
 | Callback worker | Durable outbox, signing adapters, attempts and replay | Implemented v0.4 |
-| `providers` | Per-provider request/error/receipt normalization and capabilities | v0.5 |
+| Provider adapters / SDK | Declared request subsets, sender drivers and error normalization | v0.5 subsets |
 | `relay` | Explicit real-send routing, connector jobs and delivery receipts | v0.6 |
 | `devices` | Android gateway enrolment and emulator transport | v0.6–v0.7 |
 | `cloud` | Organizations, identities, tenant-aware services and quotas | v0.9 |
