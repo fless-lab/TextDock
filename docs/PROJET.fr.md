@@ -1,5 +1,10 @@
 # TextDock : vision et point de départ
 
+**Aperçu v0.7 :** labo d'émulateurs Android, sélection explicite de la cible ADB,
+injection de SMS simulés et historique. La passerelle Android ajoute le choix
+de la SIM et les rapports de présence/modèle/version. Les modems USB, le Web Push
+et les validations physiques multi-SIM/opérateurs restent à réaliser.
+
 **v0.6 en bêta :** relais intégré Twilio, passerelle Android avec APK de
 développement, clés d'idempotence, limites d'envoi, expiration et reçus signés.
 La compilation et les tests de protocole sont vérifiés ; réception réelle et

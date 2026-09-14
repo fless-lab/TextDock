@@ -5,9 +5,23 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
-- Optional Android emulator lab with explicit ADB targets, preflight checks,
-  escaped SMS injection, persistent attempt history and idempotent requests.
-- Gateway heartbeats, connection diagnostics and explicit Android SIM selection.
+## [0.7.0-beta.1] - 2026-09-14
+
+### Added
+
+- Optional Android emulator lab with explicit serial selection, readiness checks and simulated SMS injection.
+- UTF-16 console escaping, persistent injection history, idempotent intents and interrupted-attempt recovery.
+- `devices` and `inject` CLI commands and an authenticated lab API/UI.
+- Dedicated Android emulator integration workflow in addition to browser command fixtures.
+- Gateway heartbeats, last-seen/model/app-version diagnostics and selected subscription reporting.
+- Explicit Android SIM selection with no silent fallback when a selected subscription becomes unavailable.
+- Connection reset generations and synchronized pending-result handling in the Android companion.
+
+### Scope
+
+- ADB is disabled by default and physical phones cannot be targets of emulator injection.
+- Physical multi-SIM/OEM/carrier and native autofill validation is still required.
+- USB modem connectors and Web Push remain future work; the stable website is not replaced by this prerelease.
 
 ## [0.6.0-beta.3] - 2026-09-14
 

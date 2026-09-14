@@ -33,6 +33,11 @@ server on **18258**, separate from the default development instance.
 The executable smoke test checks the default port **18257**; stop your own
 TextDock instance before running it.
 
+`make e2e` also builds the test-only ADB fixture. The browser suite uses this
+fixture for deterministic unavailable/failed/successful device-lab paths. The
+separate Android emulator workflow verifies actual virtual SMS receipt; it is
+required by release CI and does not target physical devices.
+
 ## Website and documentation
 
 Edit guides in `docs/` and site-specific pages in `site/pages/`. The website build

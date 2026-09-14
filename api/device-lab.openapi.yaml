@@ -1,0 +1,109 @@
+openapi: 3.1.0
+info:
+  title: TextDock Android device lab
+  version: 0.7.0-beta.1
+  description: Explicit emulator discovery and simulated incoming SMS. Desktop authorization is required when the server token is enabled; device/gateway credentials cannot access these routes.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security:
+  - {}
+  - bearerAuth: []
+paths:
+  /api/v1/lab/status:
+    get:
+      operationId: getDeviceLabStatus
+      summary: Check optional server-side ADB and list connected targets
+      responses:
+        '200':
+          description: Availability and device eligibility; boot and virtual SIM are checked again before injection
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+                  available: { type: boolean }
+                  version: { type: string }
+                  error: { type: string }
+                  devices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        serial: { type: string }
+                        state: { type: string }
+                        model: { type: string }
+                        kind: { type: string, enum: [emulator, physical] }
+                        can_inject: { type: boolean }
+                        reason: { type: string }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+  /api/v1/lab/injections:
+    post:
+      operationId: injectEmulatorSMS
+      summary: Inject one simulated incoming SMS into an explicitly selected emulator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serial, to, from, body]
+              additionalProperties: false
+              properties:
+                serial: { type: string, pattern: '^emulator-[0-9]{4,5}$' }
+                inbox: { type: string, default: local }
+                to: { type: string, description: TextDock test recipient; the serial determines the destination emulator. }
+                from: { type: string, description: E.164-shaped numeric sender. }
+                body: { type: string, description: 1–1024 UTF-8 bytes; CRLF is normalized and unsupported controls are rejected. }
+                run_id: { type: string }
+                idempotency_key: { type: string, maxLength: 128 }
+      responses:
+        '201':
+          description: Attempt recorded. Inspect injection.status; this does not imply carrier delivery or native autofill.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { $ref: './openapi.yaml#/components/schemas/Message' }
+                  injection: { $ref: '#/components/schemas/Injection' }
+                  replayed: { type: boolean }
+        '400': { $ref: './openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './openapi.yaml#/components/responses/Error' }
+        '503': { $ref: './openapi.yaml#/components/responses/Error' }
+  /api/v1/lab/history:
+    get:
+      operationId: listInjectionHistory
+      summary: List recent attempts in one inbox, even when ADB is disabled
+      parameters:
+        - { $ref: './openapi.yaml#/components/parameters/Inbox' }
+        - { $ref: './openapi.yaml#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Newest attempts first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  injections: { type: array, items: { $ref: '#/components/schemas/Injection' } }
+        '400': { $ref: './openapi.yaml#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  schemas:
+    Injection:
+      type: object
+      properties:
+        id: { type: string }
+        message_id: { type: string }
+        inbox: { type: string }
+        serial: { type: string }
+        status: { type: string, enum: [injecting, injected, failed, unknown] }
+        detail: { type: string }
+        output: { type: string, description: 'Console output preview, limited to 4096 bytes.' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }

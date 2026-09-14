@@ -94,7 +94,7 @@ app and a compatible app/browser offers the OTP. Validate on physical hardware;
 do not label browser injection as a native SMS test. Document platform, SIM and
 carrier conditions. Gateway hardware and real send cost remain optional.
 
-## v0.7.0 — Device lab
+## v0.7.0 — Device lab (incremental preview)
 
 - Android Emulator connector through an explicitly selected ADB serial.
 - Emulator tooling preflight and local-only injected SMS history.
@@ -102,6 +102,10 @@ carrier conditions. Gateway hardware and real send cost remain optional.
 - USB modem/SIM connector after testing identified modem models.
 - Samples for Android SMS Retriever/User Consent and iOS `.oneTimeCode`.
 - Optional HTTPS Web Push with delivery/permission diagnostics.
+
+The first preview implements emulator discovery/injection, persistent history,
+gateway heartbeats and explicit SIM selection. Modem support, push notifications,
+broader platform samples and physical/OEM validation remain follow-up work.
 
 Acceptance: repeatable emulator and physical-device test matrices, including
 timeout, permission denial and manual-entry fallback. Never promise universal

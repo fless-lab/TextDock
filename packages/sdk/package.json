@@ -1,6 +1,6 @@
 {
   "name": "@textdock/sdk",
-  "version": "0.6.0-beta.3",
+  "version": "0.7.0-beta.1",
   "description": "Server-side SMS sending with local TextDock, Twilio, Vonage and OVH drivers",
   "type": "module",
   "main": "index.js",

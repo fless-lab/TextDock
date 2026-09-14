@@ -58,7 +58,7 @@ try {
     const radio = execFileSync(adb, ['-s', serial, 'logcat', '-b', 'radio', '-d', '-t', '1000'], { encoding: 'utf8', timeout: 15000 });
     console.log(radio.split('\n').filter(line => /sms|pdu|inbound|cmt/i.test(line)).join('\n'));
   }
-  assert.ok(inbox.includes('TextDock control message'), `Single PDU control was not received: ${inbox}`);
+  assert.ok(inbox.includes('TextDock control message'), `Control SMS was not received: ${inbox}`);
   assert.ok(inbox.includes(body), `SMS content did not survive console encoding: ${inbox}`);
   const occurrences = inbox.split('TextDock code "482193"').length - 1;
   assert.equal(occurrences, 1, 'Idempotent replay must not create a second SMS');

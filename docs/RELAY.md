@@ -43,6 +43,10 @@ server origin/token in the app. Start the gateway and grant SMS permission.
 The first available enrolled gateway claims queued Android jobs. Use a separate
 destination phone for receipt/autofill testing; self-sending is not assumed.
 
+The v0.7 companion can select a specific active SIM instead of the Android default.
+The Relay view also reports gateway heartbeats, model, app version and subscription
+ID. A fresh heartbeat is connectivity information, not proof of SMS delivery.
+
 Gateway credentials are distinct from phone-inbox credentials. They can claim
 outbound jobs and acknowledge their own leases, but cannot read the desktop API,
 send arbitrary new jobs or acknowledge another gateway's job. Tokens expire

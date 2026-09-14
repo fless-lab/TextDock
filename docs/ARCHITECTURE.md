@@ -23,6 +23,7 @@ internal/events/         Scoped/coalesced invalidation hub
 internal/application/    Provider-neutral capture/simulation orchestration
 internal/simulation/     Scenarios, callback formatting and durable worker
 internal/relay/          Explicit real-send configuration, Twilio transport and dispatch contracts
+internal/devicelab/      Optional ADB runner, console text encoder and injection service
 android/                 Default-SIM gateway development companion
 internal/httpapi/        HTTP boundary, JSON API, Twilio create subset, token auth
 internal/ui/             Embedded production UI assets
@@ -61,6 +62,15 @@ v0.3 adds project/inbox scope, metadata filters, consistent SQLite snapshots and
 optional retention. Every connection re-applies foreign-key enforcement; a
 separate keeper connection preserves memory databases during cancellation-driven
 request-connection recycling.
+
+The device lab is a separate optional adapter, not a relay driver. It resolves
+the configured ADB executable server-side, validates an explicit emulator serial,
+performs readiness checks and encodes SMS text before passing it to the console. A
+durable injection record is reserved before dispatch and finalized even after
+request cancellation; expired in-progress records become unknown, never retried.
+Gateway health uses separate heartbeat records with server timestamps. Android
+SIM selection remains client-side and never falls back silently from an explicitly
+selected inactive subscription.
 
 ## Planned modules, added with their first working feature
 

@@ -70,6 +70,7 @@ must be inspected before retrying a partially completed publication.
 4. Build/push the Linux amd64/arm64 container image to GHCR.
 5. Package the Node SDK as `textdock-sdk-X.Y.Z.tgz`, with source, types and license.
    Build/lint the Android development companion and include its APK in checksums.
+   Run the disposable Android emulator integration before publishing device-lab releases.
 6. After artifact/image/SDK success, publish GitHub Release with SHA256SUMS and
     generated notes. A hyphenated version is marked prerelease.
 7. Deploy the tested Pages artifact for the latest stable release. The shared

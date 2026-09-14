@@ -154,7 +154,7 @@ func ParseDevices(text string) []Device {
 	return out
 }
 
-// ValidateBody bounds the input before PDU encoding. API input normalizes CRLF
+// ValidateBody bounds the input before console encoding. API input normalizes CRLF
 // to LF; other control characters are rejected rather than silently changed.
 func ValidateBody(body string) error {
 	if len(body) > 1024 || strings.TrimSpace(body) == "" {

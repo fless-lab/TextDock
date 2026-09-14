@@ -1,5 +1,10 @@
 # API v1
 
+The v0.7 preview adds the [Android device lab](DEVICE-LAB.md): optional ADB
+discovery, explicit emulator injection and persistent history. See the
+[lab OpenAPI contract](../api/device-lab.openapi.yaml). Gateway health reporting
+is described in the [relay contract](../api/relay.openapi.yaml).
+
 Base URL: `http://localhost:18257`. JSON requests/responses use UTF-8. If configured,
 all `/api/` endpoints require `Authorization: Bearer <TEXTDOCK_TOKEN>`.
 `/healthz` is a public process liveness probe. UI assets are public; message APIs

@@ -43,6 +43,9 @@ Preview runs on port 18260 under `/TextDock/`. The static check validates local
 links, anchors, assets and the GitHub project base path. Browser tests cover
 navigation, downloads, local search, phone layout and automated accessibility.
 
+Prerelease documentation is built and tested in CI but does not replace the
+published stable site. It remains available in the prerelease's repository tree.
+
 ## Release integration
 
 CI builds and tests the site from the same commit as the application. Stable

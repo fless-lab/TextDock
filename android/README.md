@@ -1,7 +1,7 @@
 # Android SIM gateway — development preview
 
 The companion app polls an explicitly enabled TextDock Android relay and sends
-claimed messages using the phone's default SIM. It uses only Android platform
+claimed messages using the selected SIM or the phone's default SMS SIM. It uses only Android platform
 APIs; there is no external Android runtime dependency.
 
 ## Setup
@@ -10,8 +10,11 @@ APIs; there is no external Android runtime dependency.
 2. Open **Relay** on the desktop and create a gateway credential.
 3. Install the development APK from the prerelease on an Android 8+ test device
    with an active SIM and a configured default SMS subscription.
-4. Enter the server's LAN/HTTPS origin and gateway token, then press **Start
-gateway**. Grant SMS permission; a foreground notification indicates activity.
+4. Enter the server's LAN/HTTPS origin and gateway token. Optionally press
+   **Refresh SIM list** to grant phone-state permission and choose a specific
+   subscription; default-SIM sending does not require that additional permission.
+   Press **Start gateway** and grant SMS permission. A foreground notification
+   indicates activity.
 5. Use **Relay — real SMS** in the TextDock composer and address a separate phone
    you control. The SIM determines the sender; an alphanumeric `from` is not used.
 
@@ -22,12 +25,28 @@ automatically. The server retains the request state for inspection.
 
 **Stop gateway** stops polling, but cannot undo an SMS already handed to Android.
 Server-side credential revocation prevents further claims/results. Do not switch
-servers or credentials while a result is pending; inspect that job first. If a
-revoked connection cannot finish its pending result, stop the app and clear its
-storage before enrolling again. The old server job becomes unknown rather than
-being delivered a second time.
+servers, credentials or SIM selection while a result is pending; inspect that job
+first. **Reset connection** stops the service and forgets local settings/pending
+results. It never repeats a carrier send. A server job whose result was lost
+becomes unknown and remains available for inspection.
 An acknowledgement rejected as a missing/conflicting job clears the local pending
 result and records a diagnostic; it does not issue another carrier send.
+
+## SIM selection and connection status
+
+A specific SIM is checked again before dispatch. If it is removed, inactive or
+phone-state permission has been revoked, the job fails rather than silently
+using another subscription. Subscription IDs can change when SIMs are replaced;
+refresh and choose explicitly after a change.
+
+The app reports a heartbeat every 15 seconds with its model, app version and
+selected subscription ID. The Relay view shows the last report and considers it
+online for 45 seconds. This indicates server connectivity, not radio readiness
+or carrier delivery. Older servers without the heartbeat endpoint remain usable.
+
+Connection generations and short synchronized state updates keep an old service
+or SMS callback from writing into a reset/reconfigured connection. These paths
+are still a development preview and require physical-device lifecycle tests.
 
 ## Build
 
@@ -44,11 +63,11 @@ uninstall/reinstall; that clears the locally saved gateway credential.
 
 ## Scope of this preview
 
-- Real SMS through the default SIM; multipart submission results.
+- Real SMS through the default or explicitly selected SIM; multipart submission results.
 - Persistent pending-result state, no automatic carrier resend after restart.
 - Foreground operation started by the user; no boot-start receiver.
 - No inbox-reading permission, broad contact access or background SMS scraping.
-- No QR enrolment, explicit multi-SIM picker, carrier delivery reports or
+- No QR enrolment, carrier delivery reports or
   production app-store distribution yet.
 
 The APK is build/lint checked. Physical device behavior, OEM permission policies,

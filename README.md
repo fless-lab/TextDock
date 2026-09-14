@@ -70,9 +70,9 @@ The OTP endpoint returns `{"code":"482193","message_id":"msg_…"}`. The
 application remains responsible for generating, expiring and verifying codes.
 Extraction is a heuristic for 4–8 digit candidates, not an authentication service.
 
-## Available in v0.6.0-beta.3
+## Available in v0.7.0-beta.1
 
-This checkout includes the native-relay preview. The public documentation site
+This checkout includes the native-relay and device-lab preview. The public documentation site
 tracks the latest stable release. See [real relay setup and validation](docs/RELAY.md).
 
 - Persistent SQLite inbox and responsive desktop/phone UI, light and dark themes.
@@ -93,6 +93,8 @@ tracks the latest stable release. See [real relay setup and validation](docs/REL
 - A server-side SDK for local/Twilio/Vonage/OVH sending and documented provider capture subsets.
 - Optional built-in Twilio relay and Android SIM gateway preview, with real-send labels and durable dispatch state.
 - Idempotency, limits, queue expiration and native OTP message-format helpers.
+- Optional ADB emulator discovery/injection, durable history and explicit target selection.
+- Android gateway heartbeats, connection diagnostics and explicit SIM selection.
 - Binaries and Docker release workflow, automated API and browser checks.
 
 **Not yet implemented:** push notifications, USB modem connectors, hardened multi-SIM device support and hosted
@@ -137,6 +139,7 @@ for HTTP; remote access needs HTTPS. Details: [mobile and autofill](docs/MOBILE-
 - [Delivery simulation and webhooks](docs/SIMULATION.md)
 - [Provider compatibility and production switching](docs/PROVIDERS.md) · [Node SDK](packages/sdk/README.md)
 - [Real SMS relay preview](docs/RELAY.md) · [Android companion](android/README.md)
+- [Android device lab](docs/DEVICE-LAB.md)
 - [Versioned roadmap and acceptance criteria](docs/ROADMAP.md)
 - [Mobile, native SMS, WebOTP and Android/iOS](docs/MOBILE-AND-OTP.md)
 - [Phone numbers and OTPs in tests](docs/TEST-NUMBERS.md)

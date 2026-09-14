@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock real SMS relay preview
-  version: 0.6.0-beta.3
+  version: 0.7.0-beta.1
   description: Explicitly enabled real sending, leased Android gateway jobs and signed Twilio receipts. Physical-device behavior remains a prerelease validation task.
   license: { name: MIT, identifier: MIT }
 servers:
@@ -99,6 +99,25 @@ paths:
               schema: { $ref: '#/components/schemas/Job' }
         '204': { description: No eligible job or dispatch budget available }
         '401': { $ref: './openapi.yaml#/components/responses/Error' }
+  /relay/v1/heartbeat:
+    post:
+      operationId: recordGatewayHeartbeat
+      summary: Report this gateway's connectivity and selected subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                model: { type: string, maxLength: 120 }
+                app_version: { type: string, maxLength: 48 }
+                subscription_id: { type: integer, minimum: -1, description: Android subscription ID or -1 for the default SIM. }
+      responses:
+        '204': { description: Heartbeat timestamp recorded on the server }
+        '400': { $ref: './openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
   /relay/v1/jobs/result:
     post:
       operationId: acknowledgeGatewayJob
@@ -177,6 +196,11 @@ components:
         name: { type: string }
         expires_at: { type: string, format: date-time }
         revoked: { type: boolean }
+        last_seen: { type: string, format: date-time }
+        online: { type: boolean, description: 'Fresh heartbeat (45 seconds), unexpired credential and not revoked.' }
+        model: { type: string }
+        app_version: { type: string }
+        subscription_id: { type: integer }
     Job:
       type: object
       properties:
