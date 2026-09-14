@@ -39,6 +39,20 @@ func TestRealRelayRequiresOptInAndGatewayScope(t *testing.T) {
 	if !strings.HasPrefix(enrollment.Token, "td_gateway_") {
 		t.Fatalf("enrollment: %d", r.StatusCode)
 	}
+	health := request(t, server, "POST", "/relay/v1/heartbeat", `{"model":"Test Android","app_version":"preview","subscription_id":7}`, enrollment.Token)
+	if health.StatusCode != 204 {
+		t.Fatalf("heartbeat: %d", health.StatusCode)
+	}
+	listed := request(t, server, "GET", "/api/v1/gateways", "", "")
+	var items struct {
+		Gateways []relay.Gateway `json:"gateways"`
+	}
+	if err := json.NewDecoder(listed.Body).Decode(&items); err != nil {
+		t.Fatal(err)
+	}
+	if len(items.Gateways) != 1 || !items.Gateways[0].Online || items.Gateways[0].Model != "Test Android" || items.Gateways[0].SubscriptionID == nil || *items.Gateways[0].SubscriptionID != 7 {
+		t.Fatalf("gateway status: %+v", items)
+	}
 	if r := request(t, server, "GET", "/api/v1/messages", "", enrollment.Token); r.StatusCode != 403 {
 		t.Fatal("gateway credential opened admin inbox")
 	}
@@ -59,6 +73,9 @@ func TestRealRelayRequiresOptInAndGatewayScope(t *testing.T) {
 	request(t, server, "DELETE", "/api/v1/gateways/"+enrollment.Gateway.ID, "", "")
 	if r := request(t, server, "POST", "/relay/v1/jobs/claim", `{}`, enrollment.Token); r.StatusCode != 401 {
 		t.Fatal("revoked gateway claim")
+	}
+	if r := request(t, server, "POST", "/relay/v1/heartbeat", `{}`, enrollment.Token); r.StatusCode != 401 {
+		t.Fatal("revoked gateway reported health")
 	}
 }
 

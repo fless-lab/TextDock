@@ -22,6 +22,16 @@ try {
   const status = await (await fetch(base + '/lab/status', { headers })).json();
   assert.equal(status.available, true, JSON.stringify(status));
   assert.ok(status.devices.some(d => d.serial === serial && d.can_inject));
+  let sim = '';
+  for (let n = 0; n < 60; n++) {
+    sim = execFileSync(adb, ['-s', serial, 'shell', 'getprop', 'gsm.sim.state'], { encoding: 'utf8', timeout: 10000 });
+    if (/READY|LOADED/.test(sim)) break;
+    await delay(1000);
+  }
+  assert.match(sim, /READY|LOADED/, 'Virtual SIM must be ready');
+  const controlResponse = await fetch(base + '/lab/injections', { method: 'POST', headers, body: JSON.stringify({ serial, from: '+12025550100', to: '+12025550123', body: 'TextDock control message', idempotency_key: 'control-message' }) });
+  const control = await controlResponse.json();
+  assert.equal(control.injection?.status, 'injected', JSON.stringify(control));
   const body = 'TextDock code "482193"; $literal \\backslash 🙂\n\n@login.example.test #482193';
   const payload = { serial, inbox: 'local', from: '+12025550100', to: '+12025550123', body, run_id: 'real-emulator-ci', idempotency_key: 'real-emulator-ci' };
   const response = await fetch(base + '/lab/injections', { method: 'POST', headers, body: JSON.stringify(payload) });
@@ -32,6 +42,7 @@ try {
   const repeat = await (await fetch(base + '/lab/injections', { method: 'POST', headers, body: JSON.stringify(payload) })).json();
   assert.equal(repeat.replayed, true);
   assert.equal(repeat.message.id, result.message.id);
+  await delay(1500);
 
   // Google APIs userdebug images allow root on disposable emulators. This is
   // test-only inspection; the product never roots devices or reads SMS inboxes.
@@ -43,6 +54,11 @@ try {
     if (inbox.includes(body)) break;
     await delay(1000);
   }
+  if (!inbox.includes(body)) {
+    const radio = execFileSync(adb, ['-s', serial, 'logcat', '-b', 'radio', '-d', '-t', '1000'], { encoding: 'utf8', timeout: 15000 });
+    console.log(radio.split('\n').filter(line => /sms|pdu|inbound|cmt/i.test(line)).join('\n'));
+  }
+  assert.ok(inbox.includes('TextDock control message'), `Single PDU control was not received: ${inbox}`);
   assert.ok(inbox.includes(body), `SMS content did not survive console encoding: ${inbox}`);
   const occurrences = inbox.split('TextDock code "482193"').length - 1;
   assert.equal(occurrences, 1, 'Idempotent replay must not create a second SMS');

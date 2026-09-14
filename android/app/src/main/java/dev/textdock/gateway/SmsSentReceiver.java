@@ -9,9 +9,13 @@ import org.json.JSONObject;
 
 public final class SmsSentReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
+        synchronized (GatewayState.LOCK) { record(context, intent); }
+    }
+    private void record(Context context, Intent intent) {
         SharedPreferences prefs = context.getSharedPreferences("gateway", Context.MODE_PRIVATE);
         try {
             if (!prefs.contains("job")) return;
+            if ("ack".equals(prefs.getString("phase", "")) && !"unknown".equals(prefs.getString("result", ""))) return;
             JSONObject job = new JSONObject(prefs.getString("job", "{}"));
             if (!job.getString("id").equals(intent.getStringExtra("job"))) return;
             JSONObject parts = new JSONObject(prefs.getString("parts", "{}"));

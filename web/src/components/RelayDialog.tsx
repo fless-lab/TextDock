@@ -17,6 +17,11 @@ interface Gateway {
   name: string;
   expires_at: string;
   revoked: boolean;
+  online?: boolean;
+  last_seen?: string;
+  model?: string;
+  app_version?: string;
+  subscription_id?: number;
 }
 export function RelayDialog({
   info,
@@ -43,6 +48,10 @@ export function RelayDialog({
   }
   useEffect(() => {
     if (info.enabled) void refresh();
+    const timer = setInterval(() => {
+      if (info.enabled && !document.hidden) void refresh();
+    }, 15000);
+    return () => clearInterval(timer);
   }, [info.enabled]);
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -178,6 +187,25 @@ export function RelayDialog({
               <li key={g.id}>
                 <div>
                   <strong>{g.name}</strong>
+                  <small>
+                    {g.revoked
+                      ? "Revoked"
+                      : g.online
+                        ? "Online"
+                        : g.last_seen
+                          ? "Offline"
+                          : "No heartbeat yet"}
+                    {g.model ? ` · ${g.model}` : ""}
+                    {g.app_version ? ` · ${g.app_version}` : ""}
+                  </small>
+                  {g.last_seen && (
+                    <small>
+                      Last seen {new Date(g.last_seen).toLocaleString()} ·{" "}
+                      {g.subscription_id === -1
+                        ? "Default SIM"
+                        : `SIM subscription ${g.subscription_id}`}
+                    </small>
+                  )}
                   <small>{new Date(g.expires_at).toLocaleDateString()}</small>
                 </div>
                 {g.revoked ? (
@@ -195,6 +223,14 @@ export function RelayDialog({
               </li>
             ))}
           </ul>
+          <button
+            className="secondary"
+            onClick={() => {
+              void refresh();
+            }}
+          >
+            Refresh gateway status
+          </button>
         </>
       )}
       <OTPFormat />

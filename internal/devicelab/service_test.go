@@ -27,6 +27,9 @@ func (r *runner) Run(ctx context.Context, args ...string) (string, error) {
 	case reflect.DeepEqual(args, []string{"devices", "-l"}):
 		return "List of devices attached\nemulator-5554\tdevice model:Test\nphysical\tdevice\nemulator-5556\toffline\n", nil
 	case len(args) == 5 && args[2] == "shell":
+		if args[4] == "gsm.sim.state" {
+			return "LOADED", nil
+		}
 		if r.boot != "" {
 			return r.boot, nil
 		}
@@ -62,6 +65,11 @@ func TestInjectionScopePersistenceAndIdempotency(t *testing.T) {
 	if err != nil || !second.Replayed || second.Message.ID != result.Message.ID || len(r.injections) != 1 {
 		t.Fatalf("duplicate injection: %+v %v", second, err)
 	}
+	r.boot = "0"
+	if replay, err := s.Inject(ctx, in); err != nil || !replay.Replayed {
+		t.Fatalf("replay depended on emulator availability: %+v %v", replay, err)
+	}
+	r.boot = "1"
 	in.Body = "changed"
 	if _, err := s.Inject(ctx, in); !errors.Is(err, devicelab.ErrConflict) {
 		t.Fatalf("conflicting key: %v", err)

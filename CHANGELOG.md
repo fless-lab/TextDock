@@ -7,6 +7,7 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 - Optional Android emulator lab with explicit ADB targets, preflight checks,
   escaped SMS injection, persistent attempt history and idempotent requests.
+- Gateway heartbeats, connection diagnostics and explicit Android SIM selection.
 
 ## [0.6.0-beta.3] - 2026-09-14
 

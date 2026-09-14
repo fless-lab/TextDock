@@ -105,6 +105,17 @@ func (s *Server) gatewayAPI(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Hub.Resync()
 		writeJSON(w, 200, j)
+	case r.Method == "POST" && r.URL.Path == "/relay/v1/heartbeat":
+		var health relay.Health
+		if decode(r, &health) != nil || len(health.Model) > 120 || len(health.AppVersion) > 48 || health.SubscriptionID < -1 || health.SubscriptionID > 2147483647 {
+			fail(w, 400, "invalid gateway health fields")
+			return
+		}
+		if err := s.Relay.Store.GatewayHeartbeat(r.Context(), g.ID, health); err != nil {
+			internalError(w, err)
+			return
+		}
+		w.WriteHeader(204)
 	case r.Method == "POST" && r.URL.Path == "/relay/v1/jobs/result":
 		var in struct {
 			ID         string `json:"id"`

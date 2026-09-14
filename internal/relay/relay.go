@@ -94,10 +94,20 @@ type Job struct {
 	Body       string    `json:"body,omitempty"`
 }
 type Gateway struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	ExpiresAt time.Time `json:"expires_at"`
-	Revoked   bool      `json:"revoked"`
+	LastSeen       *time.Time `json:"last_seen,omitempty"`
+	Online         bool       `json:"online"`
+	Model          string     `json:"model,omitempty"`
+	AppVersion     string     `json:"app_version,omitempty"`
+	SubscriptionID *int       `json:"subscription_id,omitempty"`
+	ID             string     `json:"id"`
+	Name           string     `json:"name"`
+	ExpiresAt      time.Time  `json:"expires_at"`
+	Revoked        bool       `json:"revoked"`
+}
+type Health struct {
+	Model          string `json:"model"`
+	AppVersion     string `json:"app_version"`
+	SubscriptionID int    `json:"subscription_id"`
 }
 type Result struct {
 	State      string `json:"state"`
@@ -116,6 +126,7 @@ type Repository interface {
 	GatewayByHash(context.Context, string) (Gateway, error)
 	Gateways(context.Context) ([]Gateway, error)
 	RevokeGateway(context.Context, string) error
+	GatewayHeartbeat(context.Context, string, Health) error
 }
 
 type Service struct {

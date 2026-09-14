@@ -37,6 +37,7 @@ type Result struct {
 	Replayed  bool            `json:"replayed"`
 }
 type Repository interface {
+	LookupInjection(context.Context, message.Message, string) (Result, error)
 	ReserveInjection(context.Context, message.Message, string) (Result, error)
 	FinishInjection(context.Context, string, string, string, string) (Result, error)
 	InjectionHistory(context.Context, string, int) ([]Injection, error)
@@ -96,6 +97,12 @@ func (s *Service) Inject(ctx context.Context, in Input) (Result, error) {
 		return Result{}, err
 	}
 	m.Analysis.Segments = len(pdus)
+	if m.IdempotencyKey != "" {
+		previous, err := s.Store.LookupInjection(ctx, m, in.Serial)
+		if err != nil || previous.Replayed {
+			return previous, err
+		}
+	}
 	status := s.Status(ctx)
 	if !status.Available {
 		return Result{}, fmt.Errorf("%w: %s", ErrUnavailable, status.Error)
@@ -114,6 +121,10 @@ func (s *Service) Inject(ctx context.Context, in Input) (Result, error) {
 	if err != nil || strings.TrimSpace(boot) != "1" {
 		return Result{}, ErrTarget
 	}
+	sim, err := s.Runner.Run(ctx, "-s", in.Serial, "shell", "getprop", "gsm.sim.state")
+	if err != nil || (!strings.Contains(sim, "READY") && !strings.Contains(sim, "LOADED")) {
+		return Result{}, fmt.Errorf("%w: virtual SIM is not ready", ErrTarget)
+	}
 	name, err := s.Runner.Run(ctx, "-s", in.Serial, "emu", "avd", "name")
 	if err != nil || strings.Contains(name, "KO:") || !hasOK(name) {
 		return Result{}, ErrTarget
@@ -128,6 +139,16 @@ func (s *Service) Inject(ctx context.Context, in Input) (Result, error) {
 	}
 	state, detail, output := "injected", "Emulator console accepted the simulated incoming SMS", ""
 	for i, pdu := range pdus {
+		if i > 0 {
+			select {
+			case <-ctx.Done():
+				state, detail = "unknown", "Multipart injection interrupted; automatic reinjection is disabled"
+			case <-time.After(250 * time.Millisecond):
+			}
+			if ctx.Err() != nil {
+				break
+			}
+		}
 		part, commandErr := s.Runner.Run(ctx, "-s", in.Serial, "emu", "sms", "pdu", pdu)
 		output += fmt.Sprintf("Part %d/%d: %s\n", i+1, len(pdus), part)
 		if strings.Contains(part, "KO:") || commandErr != nil || !hasOK(part) {

@@ -14,7 +14,7 @@ func main() {
 	case len(args) == 2 && args[0] == "devices": fmt.Println("List of devices attached\nemulator-5554\tdevice product:sdk model:Test_Emulator transport_id:1\nemulator-5556\toffline\nphysical-test\tdevice model:Physical_Test_Phone")
 	case len(args) >= 2 && args[0] == "-s" && args[1] == "emulator-5554":
 		switch {
-		case len(args) == 5 && args[2] == "shell": fmt.Println("1")
+		case len(args) == 5 && args[2] == "shell": if args[4] == "gsm.sim.state" { fmt.Println("LOADED") } else { fmt.Println("1") }
 		case len(args) == 5 && args[3] == "avd": fmt.Println("TextDock_Test\nOK")
 		case len(args) == 6 && args[2] == "emu" && args[3] == "sms" && args[4] == "pdu":
 			if strings.ContainsAny(args[5], "\r\n\x00") { fmt.Fprintln(os.Stderr, "unsafe console delimiter"); os.Exit(1) }

@@ -21,7 +21,7 @@ type SQLite struct {
 	keeper *sql.DB
 }
 
-const schemaVersion = 6
+const schemaVersion = 7
 
 func Open(path string) (*SQLite, error) {
 	// database/sql can discard a connection after a cancelled transaction.
@@ -103,6 +103,10 @@ func Open(path string) (*SQLite, error) {
 		return nil, err
 	}
 	if err := s.migrateDeviceLab(); err != nil {
+		cleanup()
+		return nil, err
+	}
+	if err := s.migrateGatewayHealth(); err != nil {
 		cleanup()
 		return nil, err
 	}

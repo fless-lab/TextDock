@@ -48,6 +48,12 @@ func scanInjection(row interface{ Scan(...any) error }) (devicelab.Injection, er
 	return item, err
 }
 func (s *SQLite) ReserveInjection(ctx context.Context, m message.Message, serial string) (devicelab.Result, error) {
+	return s.reserveInjection(ctx, m, serial, true)
+}
+func (s *SQLite) LookupInjection(ctx context.Context, m message.Message, serial string) (devicelab.Result, error) {
+	return s.reserveInjection(ctx, m, serial, false)
+}
+func (s *SQLite) reserveInjection(ctx context.Context, m message.Message, serial string, create bool) (devicelab.Result, error) {
 	result := devicelab.Result{Message: m}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -78,6 +84,9 @@ func (s *SQLite) ReserveInjection(ctx context.Context, m message.Message, serial
 		if !errors.Is(err, sql.ErrNoRows) {
 			return result, err
 		}
+	}
+	if !create {
+		return result, nil
 	}
 	if _, err := insertMessage(ctx, tx, m); err != nil {
 		return result, err

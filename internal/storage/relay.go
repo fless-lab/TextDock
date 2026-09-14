@@ -301,7 +301,7 @@ func (s *SQLite) GatewayByHash(ctx context.Context, hash string) (relay.Gateway,
 	return g, err
 }
 func (s *SQLite) Gateways(ctx context.Context) ([]relay.Gateway, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,name,expires_at,revoked FROM gateways ORDER BY id LIMIT 200`)
+	rows, err := s.db.QueryContext(ctx, `SELECT g.id,g.name,g.expires_at,g.revoked,coalesce(h.seen_at,0),coalesce(h.model,''),coalesce(h.app_version,''),coalesce(h.subscription_id,-1) FROM gateways g LEFT JOIN gateway_health h ON h.gateway_id=g.id ORDER BY g.id LIMIT 200`)
 	if err != nil {
 		return nil, err
 	}
@@ -309,11 +309,18 @@ func (s *SQLite) Gateways(ctx context.Context) ([]relay.Gateway, error) {
 	out := make([]relay.Gateway, 0)
 	for rows.Next() {
 		var g relay.Gateway
-		var expires int64
-		if err := rows.Scan(&g.ID, &g.Name, &expires, &g.Revoked); err != nil {
+		var expires, seen int64
+		var subscription int
+		if err := rows.Scan(&g.ID, &g.Name, &expires, &g.Revoked, &seen, &g.Model, &g.AppVersion, &subscription); err != nil {
 			return nil, err
 		}
 		g.ExpiresAt = time.UnixMilli(expires).UTC()
+		if seen > 0 {
+			at := time.UnixMilli(seen).UTC()
+			g.LastSeen = &at
+			g.SubscriptionID = &subscription
+			g.Online = !g.Revoked && g.ExpiresAt.After(time.Now()) && time.Since(at) < 45*time.Second
+		}
 		out = append(out, g)
 	}
 	return out, rows.Err()

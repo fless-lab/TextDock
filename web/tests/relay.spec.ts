@@ -8,6 +8,11 @@ test('enroll a gateway, queue one real-mode intent and record its result', async
   await page.getByLabel('Gateway name').fill(`Test gateway ${info.project.name}`);
   await page.getByRole('button', { name: 'Create gateway token' }).click();
   const token = await page.getByLabel('Gateway token', { exact: true }).inputValue();
+  const health = await request.post('/relay/v1/heartbeat', { headers: { Authorization: `Bearer ${token}` }, data: { model: 'Test Android', app_version: 'test-preview', subscription_id: 7 } });
+  expect(health.status()).toBe(204);
+  await page.getByRole('button', { name: 'Refresh gateway status' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Online · Test Android');
+  await expect(page.getByRole('dialog')).toContainText('SIM subscription 7');
   await page.getByLabel('Application hostname').fill('login.example.test');
   await page.getByRole('button', { name: 'Format message' }).click();
   await expect(page.getByRole('dialog').locator('pre').last()).toContainText('@login.example.test #482193');
