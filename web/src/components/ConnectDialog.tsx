@@ -8,7 +8,7 @@ import { Modal } from "./Modal";
 export interface Device {
   id: string;
   name: string;
-  scope: { to: string; run_id: string };
+  scope: { inbox: string; to: string; run_id: string };
   created_at: string;
   expires_at: string;
   revoked: boolean;
@@ -23,7 +23,13 @@ interface Network {
   urls: string[];
 }
 
-export function ConnectDialog({ close }: { close: () => void }) {
+export function ConnectDialog({
+  close,
+  inbox = "local",
+}: {
+  close: () => void;
+  inbox?: string;
+}) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [network, setNetwork] = useState<Network>();
   const [base, setBase] = useState(location.origin);
@@ -78,6 +84,7 @@ export function ConnectDialog({ close }: { close: () => void }) {
         await api<Pair>("/pairings", {
           method: "POST",
           body: JSON.stringify({
+            inbox,
             to: values.get("to"),
             run_id: values.get("run_id"),
           }),

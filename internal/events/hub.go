@@ -4,7 +4,7 @@ package events
 
 import "sync"
 
-type Filter struct{ To, RunID, DeviceID string }
+type Filter struct{ Inbox, To, RunID, DeviceID string }
 type subscriber struct {
 	filter Filter
 	ch     chan string
@@ -25,16 +25,30 @@ func (h *Hub) Subscribe(filter Filter) (<-chan string, func()) {
 	return s.ch, func() { h.mu.Lock(); defer h.mu.Unlock(); delete(h.clients, s) }
 }
 
-func (h *Hub) Changed(to, runID string) {
+func (h *Hub) Changed(inbox, to, runID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for s := range h.clients {
+		if s.filter.Inbox != "" && s.filter.Inbox != inbox {
+			continue
+		}
 		if s.filter.To != "" && s.filter.To != to {
 			continue
 		}
 		if s.filter.RunID != "" && s.filter.RunID != runID {
 			continue
 		}
+		select {
+		case s.ch <- "sync":
+		default:
+		}
+	}
+}
+
+func (h *Hub) Resync() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for s := range h.clients {
 		select {
 		case s.ch <- "sync":
 		default:

@@ -1,0 +1,5 @@
+{
+  "listen": "127.0.0.1:18257",
+  "db": "data/textdock.db",
+  "retention": "168h"
+}

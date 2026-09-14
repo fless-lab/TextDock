@@ -9,7 +9,7 @@ test('pair a scoped phone, receive live SMS, reconnect, then revoke access', asy
   await page.getByLabel('Server token').fill('textdock-e2e-token-only');
   await page.getByRole('button', { name: 'Unlock inbox' }).click();
   await page.getByRole('button', { name: 'Open on phone' }).click();
-  await page.getByLabel('Test run', { exact: false }).fill(run);
+  await page.getByRole('dialog').getByLabel('Test run', { exact: false }).fill(run);
   await page.getByRole('button', { name: 'Create pairing code' }).click();
   const link = await page.getByLabel('Pairing link').inputValue();
   expect(link).toContain('/phone#pair=');

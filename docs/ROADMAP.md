@@ -15,7 +15,7 @@ inspect the OTP on desktop/mobile browser, isolate a test run, restart without
 losing messages, reject unsupported provider options. Automated tests cover these
 core paths; physical-device and hosted release checks are recorded separately.
 
-## v0.2.0 — Connect your phone (implemented)
+## v0.2.0 — Connect your phone (released)
 
 - LAN address discovery, copyable connection URL and QR pairing.
 - Single-use/expiring pairing challenges, scoped read-only device sessions,
@@ -28,15 +28,15 @@ Acceptance: scan → choose inbox → see a new message without manual refresh.
 Expired/replayed pair codes fail. A revoked phone cannot read/list/subscribe.
 The mobile session cannot delete messages or read another scope.
 
-## v0.3.0 — Daily developer workflow
+## v0.3.0 — Daily developer workflow (implemented)
 
 - Projects/inboxes, test-run views, conversations, tags and favorites.
 - Cursor pagination, indexed advanced search, bulk actions and JSON/CSV export.
 - Configurable retention, data backup/restore and transactional migrations.
 - Config file and CLI send/list/wait/purge commands.
-- TypeScript test helper and Playwright/Cypress/backend recipes.
+- Dependency-free Node test helper and Playwright/Cypress/backend recipes.
 - Improved OTP candidates with explicit patterns; GSM character highlighting.
-- Command palette, keyboard shortcuts, accessibility audit and UI regression set.
+- Command palette, keyboard shortcuts, automated accessibility checks and UI regression set.
 
 Acceptance: repeated parallel tests never pick an earlier run's OTP; browse a
 100k-message fixture without unbounded responses or rendering all rows at once.

@@ -70,11 +70,11 @@ The OTP endpoint returns `{"code":"482193","message_id":"msg_…"}`. The
 application remains responsible for generating, expiring and verifying codes.
 Extraction is a heuristic for 4–8 digit candidates, not an authentication service.
 
-## Available in v0.2.0
+## Available in v0.3.0
 
 - Persistent SQLite inbox and responsive desktop/phone UI, light and dark themes.
 - JSON capture API, search, recipient/run/time filters, per-message JSON export
-  and deletion. Live updates via SSE; latest 100 messages shown.
+  and deletion. Live updates via SSE and cursor-paginated message lists.
 - GSM-7/UTF-16 analysis, estimated segments and detected OTP copy action.
 - A bounded OTP wait endpoint for automated tests, isolated by recipient/run ID.
 - A small, tested Twilio Messages create subset (`To`, `From`, `Body`).
@@ -82,6 +82,9 @@ Extraction is a heuristic for 4–8 digit candidates, not an authentication serv
 - QR pairing with expiring one-use links, read-only recipient/run-scoped phone
   sessions, persistent mobile login and immediate revocation.
 - Dedicated phone view, LAN address suggestions and configurable public origin.
+- Projects/inboxes, favorites, tags, conversation filters and bulk actions.
+- CLI workflows, full JSON/JSONL/CSV export, SQLite snapshots and opt-in retention.
+- JSON configuration, custom OTP patterns and Unicode-trigger diagnostics.
 - Binaries and Docker release workflow, automated API and browser checks.
 
 **Not yet implemented:** push notifications, lifecycle
@@ -95,6 +98,9 @@ accounts. See the version-by-version [roadmap](docs/ROADMAP.md).
 | `--listen` | `TEXTDOCK_LISTEN` | `127.0.0.1:18257` |
 | `--db` | `TEXTDOCK_DB` | `data/textdock.db` |
 | `--public-url` | `TEXTDOCK_PUBLIC_URL` | Optional phone-facing HTTP(S) origin |
+| `--config` | `TEXTDOCK_CONFIG` | Optional JSON configuration file |
+| `--retention` | `TEXTDOCK_RETENTION` | `0` (disabled) |
+| `--otp-pattern` | `TEXTDOCK_OTP_PATTERN` | Default numeric heuristic |
 | — | `TEXTDOCK_TOKEN` | Empty on loopback; 16+ characters required for network binding |
 | `--version` | — | Print build version |
 
@@ -120,6 +126,7 @@ for HTTP; remote access needs HTTPS. Details: [mobile and autofill](docs/MOBILE-
 
 - [Architecture and hosted evolution](docs/ARCHITECTURE.md)
 - [UI design direction](docs/UI.md)
+- [Projects, CLI, backups and test recipes](docs/DEVELOPER-WORKFLOW.md)
 - [Versioned roadmap and acceptance criteria](docs/ROADMAP.md)
 - [Mobile, native SMS, WebOTP and Android/iOS](docs/MOBILE-AND-OTP.md)
 - [Phone pairing and live connections](docs/CONNECT.md)

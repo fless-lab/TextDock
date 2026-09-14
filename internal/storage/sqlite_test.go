@@ -2,12 +2,38 @@ package storage
 
 import (
 	"context"
+	"database/sql/driver"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/fless-lab/TextDock/internal/message"
 )
+
+func TestMemoryDatabaseSurvivesDiscardedRequestConnection(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	m, _ := message.New(message.Input{To: "+33612345678", From: "Acme", Body: "Keep this message"}, "api")
+	if err := s.Save(ctx, m); err != nil {
+		t.Fatal(err)
+	}
+	connection, err := s.db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = connection.Raw(func(any) error { return driver.ErrBadConn })
+	connection.Close()
+	if got, err := s.Get(ctx, m.ID); err != nil || got.Body != m.Body {
+		t.Fatalf("recycled connection lost the memory database: %+v %v", got, err)
+	}
+	if _, err := s.db.Exec(`INSERT INTO inboxes VALUES ('invalid', 'missing-project', 'bad')`); err == nil {
+		t.Fatal("recycled connection lost foreign-key enforcement")
+	}
+}
 
 func TestPersistenceIsolationOrderingAndLiteralSearch(t *testing.T) {
 	ctx := context.Background()

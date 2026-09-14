@@ -19,7 +19,7 @@ func (s *SQLite) migrateConnect() error {
 	if err := tx.QueryRow(`SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil {
 		return err
 	}
-	if version > 2 {
+	if version > 3 {
 		return errors.New("database schema is newer than this TextDock version")
 	}
 	if version == 1 {
@@ -48,7 +48,10 @@ func (s *SQLite) CreatePair(ctx context.Context, hash string, scope connect.Scop
 	if _, err = tx.ExecContext(ctx, `DELETE FROM pairings WHERE expires_at <= ?`, time.Now().UnixMilli()); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO pairings VALUES (?, ?, ?, ?)`, hash, scope.To, scope.RunID, expires.UnixMilli()); err != nil {
+	if scope.Inbox == "" {
+		scope.Inbox = "local"
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO pairings(code_hash, recipient, run_id, expires_at, inbox) VALUES (?, ?, ?, ?, ?)`, hash, scope.To, scope.RunID, expires.UnixMilli(), scope.Inbox); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -60,15 +63,15 @@ func (s *SQLite) ClaimPair(ctx context.Context, codeHash, tokenHash string, d co
 		return d, err
 	}
 	defer tx.Rollback()
-	err = tx.QueryRowContext(ctx, `DELETE FROM pairings WHERE code_hash = ? AND expires_at > ? RETURNING recipient, run_id`, codeHash, time.Now().UnixMilli()).Scan(&d.Scope.To, &d.Scope.RunID)
+	err = tx.QueryRowContext(ctx, `DELETE FROM pairings WHERE code_hash = ? AND expires_at > ? RETURNING recipient, run_id, inbox`, codeHash, time.Now().UnixMilli()).Scan(&d.Scope.To, &d.Scope.RunID, &d.Scope.Inbox)
 	if errors.Is(err, sql.ErrNoRows) {
 		return d, connect.ErrInvalid
 	}
 	if err != nil {
 		return d, err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO devices(id, token_hash, name, recipient, run_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		d.ID, tokenHash, d.Name, d.Scope.To, d.Scope.RunID, d.CreatedAt.UnixMilli(), d.ExpiresAt.UnixMilli())
+	_, err = tx.ExecContext(ctx, `INSERT INTO devices(id, token_hash, name, recipient, run_id, created_at, expires_at, inbox) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		d.ID, tokenHash, d.Name, d.Scope.To, d.Scope.RunID, d.CreatedAt.UnixMilli(), d.ExpiresAt.UnixMilli(), d.Scope.Inbox)
 	if err != nil {
 		return d, err
 	}
@@ -78,12 +81,12 @@ func (s *SQLite) ClaimPair(ctx context.Context, codeHash, tokenHash string, d co
 func scanDevice(row interface{ Scan(...any) error }) (connect.Device, error) {
 	var d connect.Device
 	var created, expires int64
-	err := row.Scan(&d.ID, &d.Name, &d.Scope.To, &d.Scope.RunID, &created, &expires, &d.Revoked)
+	err := row.Scan(&d.ID, &d.Name, &d.Scope.To, &d.Scope.RunID, &created, &expires, &d.Revoked, &d.Scope.Inbox)
 	d.CreatedAt, d.ExpiresAt = time.UnixMilli(created).UTC(), time.UnixMilli(expires).UTC()
 	return d, err
 }
 
-const deviceColumns = `id, name, recipient, run_id, created_at, expires_at, revoked`
+const deviceColumns = `id, name, recipient, run_id, created_at, expires_at, revoked, inbox`
 
 func (s *SQLite) DeviceByHash(ctx context.Context, hash string) (connect.Device, error) {
 	d, err := scanDevice(s.db.QueryRowContext(ctx, `SELECT `+deviceColumns+` FROM devices WHERE token_hash = ? AND revoked = 0 AND expires_at > ?`, hash, time.Now().UnixMilli()))

@@ -34,14 +34,22 @@ List filters:
 - `to`: exact recipient; URL-encode the plus sign (`%2B`).
 - `run_id`: exact test run identifier.
 - `since`: inclusive RFC3339 timestamp.
-- `limit`: 1–200, default 100; newest first. Cursor pagination is planned.
+- `limit`: 1–200, default 100; newest first.
+- `inbox`: inbox ID, defaults to `local`; paired devices enforce their stored inbox.
+- `cursor`: opaque `next_cursor` from the preceding page, keeping filters unchanged.
+- `favorite`, `otp`: booleans to select favorites or detected-code messages.
+- `tag`: exact metadata tag.
+
+v0.3 responses include `next_cursor`, empty on the final page.
+Project management and export routes are in [workspace OpenAPI](../api/workspace.openapi.yaml).
 
 OTP uses the same filters plus `timeout` (0–30 whole seconds, default 0), and
 **requires** both `to` and `run_id`. It returns the first candidate from newest
 matching messages in the bounded result set. Every execution should have a new
 run ID; reuse can return an earlier code. This is not a queue or one-time consume
-endpoint. OTP extraction recognizes 4–8 digit standalone candidates; configure
-your tests accordingly, or read the complete body for other formats.
+endpoint. Default OTP extraction recognizes 4–8 digit standalone candidates.
+`--otp-pattern` can replace it with the first capture group of a custom RE2
+pattern (up to 64 bytes); otherwise read the complete body for other formats.
 
 Errors are `{ "error": "description" }`: 400 malformed/invalid request, 401 token,
 403 browser-origin/Host boundary, 404 missing resource/OTP, 415 wrong Twilio form

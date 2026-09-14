@@ -22,7 +22,7 @@ func setup(t *testing.T, token string) (*httptest.Server, *storage.SQLite) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &Server{Store: store, Devices: store, Token: token, Version: "test", UI: fstest.MapFS{"index.html": {Data: []byte("TextDock")}}}
+	s := &Server{Store: store, Devices: store, Workspaces: store, Token: token, Version: "test", UI: fstest.MapFS{"index.html": {Data: []byte("TextDock")}}}
 	server := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { server.Close(); store.Close() })
 	return server, store

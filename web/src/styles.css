@@ -15,6 +15,164 @@
   color: var(--text);
   background: var(--bg);
 }
+.encoding-note {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin: 18px 0 0;
+  overflow-wrap: anywhere;
+}
+.workspace-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.workspace-picker select {
+  max-width: 320px;
+  border: none;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 0;
+}
+.filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 28px 16px;
+  font-size: 12px;
+}
+.filter-menu {
+  position: relative;
+}
+.filter-menu summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.filter-fields {
+  position: absolute;
+  z-index: 3;
+  top: 25px;
+  left: 0;
+  width: 270px;
+  border: 1px solid var(--line);
+  padding: 18px;
+  border-radius: 4px;
+  background: var(--bg);
+  box-shadow: 0 6px 22px #0001;
+}
+.filter-fields label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.filter-fields input {
+  width: 100%;
+  display: block;
+  margin-top: 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+.message-item {
+  position: relative;
+}
+.message-item .message-row {
+  padding-left: 42px;
+}
+.message-checkbox {
+  position: absolute;
+  left: 15px;
+  top: 18px;
+  margin: 0;
+  z-index: 1;
+  accent-color: var(--accent);
+}
+.select-all {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.select-all input {
+  accent-color: var(--accent);
+}
+.favorite-mark {
+  color: var(--accent);
+  margin-left: 7px;
+  vertical-align: middle;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+}
+.tags-editor {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 22px 0;
+}
+.tags-editor label {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+.tags-editor input {
+  font-size: 12px;
+}
+form select {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  margin-top: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+.command-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 18px;
+}
+.command-list button {
+  text-align: left;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.command-list button:hover {
+  background: var(--soft);
+}
+@media (max-width: 680px) {
+  .workspace-picker select {
+    max-width: 200px;
+    font-size: 11px;
+  }
+  .filter-toolbar {
+    padding: 0 18px 17px;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  .sidebar {
+    gap: 5px;
+  }
+  .sidebar nav {
+    gap: 0;
+  }
+  .nav-item {
+    padding: 8px;
+  }
+}
 .clipboard-fallback {
   position: fixed;
   left: -10000px;

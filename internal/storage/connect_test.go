@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -17,27 +19,29 @@ import (
 func TestPairingSingleUseExpiryPersistenceAndMigration(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "pairings.db")
-	s, err := Open(path)
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	m, _ := message.New(message.Input{To: "+33612345678", From: "Acme", Body: "Preserve me"}, "api")
-	if err := s.Save(ctx, m); err != nil {
+	// Original v0.1 schema fixture, independent of the current migration code.
+	if _, err := db.Exec(`CREATE TABLE messages(id TEXT PRIMARY KEY, recipient TEXT NOT NULL, run_id TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL, payload TEXT NOT NULL);
+	CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY); INSERT INTO schema_migrations VALUES (1);`); err != nil {
 		t.Fatal(err)
 	}
-	// Recreate a v0.1 database state with captured messages and no device tables.
-	if _, err := s.db.Exec(`DROP TABLE devices; DROP TABLE pairings; DELETE FROM schema_migrations WHERE version = 2;`); err != nil {
+	payload, _ := json.Marshal(m)
+	if _, err := db.Exec(`INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?)`, m.ID, m.To, m.RunID, m.Body, m.CreatedAt.Format(timestamp), string(payload)); err != nil {
 		t.Fatal(err)
 	}
-	s.Close()
-	s, err = Open(path)
+	db.Close()
+	s, err := Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got, err := s.Get(ctx, m.ID); err != nil || got.Body != m.Body {
 		t.Fatalf("migration lost message: %+v %v", got, err)
 	}
-	scope := connect.Scope{To: m.To, RunID: "run-a"}
+	scope := connect.Scope{Inbox: "local", To: m.To, RunID: "run-a"}
 	if err := s.CreatePair(ctx, connect.Hash("challenge"), scope, time.Now().Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}

@@ -10,6 +10,10 @@ peu courant : **18257**. L'open source local reste autonome.
 destinataire/test, les événements en direct et la révocation sont implémentés.
 La v0.1 est publiée sur GitHub avec binaires et image Docker via la CI.
 
+**Avancement v0.3 :** projets/inboxes, pagination, favoris, tags, filtres,
+exports et commandes CLI sont disponibles, avec sauvegarde/restauration SQLite,
+rétention optionnelle, extraction OTP configurable et vérifications d'accessibilité.
+
 ## Ce que contient la v0.1.0
 
 La capture fonctionne réellement : API JSON, petit sous-ensemble Twilio testé,

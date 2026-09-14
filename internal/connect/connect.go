@@ -12,6 +12,7 @@ import (
 var ErrInvalid = errors.New("pairing code or device session is invalid or expired")
 
 type Scope struct {
+	Inbox string `json:"inbox"`
 	To    string `json:"to"`
 	RunID string `json:"run_id"`
 }

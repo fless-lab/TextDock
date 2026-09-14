@@ -5,7 +5,7 @@ import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const binary = process.env.TEXTDOCK_BIN || new URL('../bin/textdock', import.meta.url).pathname;
-const env = { ...process.env, TEXTDOCK_LISTEN: '', TEXTDOCK_DB: '', TEXTDOCK_TOKEN: '' };
+const env = { ...process.env, TEXTDOCK_LISTEN: '', TEXTDOCK_DB: '', TEXTDOCK_TOKEN: '', TEXTDOCK_CONFIG: '', TEXTDOCK_RETENTION: '', TEXTDOCK_OTP_PATTERN: '', TEXTDOCK_PUBLIC_URL: '' };
 const server = spawn(binary, ['--db', ':memory:'], { env, stdio: ['ignore', 'ignore', 'pipe'] });
 let logs = '';
 server.stderr.on('data', chunk => { logs += chunk; });

@@ -14,6 +14,9 @@ import (
 
 type Message struct {
 	ID        string    `json:"id"`
+	Inbox     string    `json:"inbox"`
+	Favorite  bool      `json:"favorite"`
+	Tags      []string  `json:"tags"`
 	To        string    `json:"to"`
 	From      string    `json:"from"`
 	Body      string    `json:"body"`
@@ -25,14 +28,16 @@ type Message struct {
 }
 
 type Analysis struct {
-	Encoding   string `json:"encoding"`
-	Units      int    `json:"units"`
-	Segments   int    `json:"segments"`
-	Characters int    `json:"characters"`
-	OTP        string `json:"otp,omitempty"`
+	NonGSM     []string `json:"non_gsm,omitempty"`
+	Encoding   string   `json:"encoding"`
+	Units      int      `json:"units"`
+	Segments   int      `json:"segments"`
+	Characters int      `json:"characters"`
+	OTP        string   `json:"otp,omitempty"`
 }
 
 type Input struct {
+	Inbox string `json:"inbox,omitempty"`
 	To    string `json:"to"`
 	From  string `json:"from"`
 	Body  string `json:"body"`
@@ -40,11 +45,17 @@ type Input struct {
 }
 
 type Filter struct {
-	Query string
-	To    string
-	RunID string
-	Since time.Time
-	Limit int
+	Inbox    string
+	Before   time.Time
+	BeforeID string
+	Favorite bool
+	OTPOnly  bool
+	Tag      string
+	Query    string
+	To       string
+	RunID    string
+	Since    time.Time
+	Limit    int
 }
 
 // Repository is the persistence seam. Hosted tenancy requires an explicit
@@ -54,10 +65,18 @@ type Repository interface {
 	Get(context.Context, string) (Message, error)
 	List(context.Context, Filter) ([]Message, error)
 	Delete(context.Context, string) (bool, error)
+	Update(context.Context, string, Update) (Message, error)
+	Purge(context.Context, string) (int64, error)
 	Close() error
 }
 
 var ErrInvalid = errors.New("invalid message")
+
+type Update struct {
+	Favorite *bool     `json:"favorite,omitempty"`
+	Tags     *[]string `json:"tags,omitempty"`
+}
+
 var phone = regexp.MustCompile(`^\+[1-9][0-9]{6,14}$`)
 
 func ValidRecipient(to string) bool { return phone.MatchString(to) }
@@ -65,6 +84,9 @@ func ValidRecipient(to string) bool { return phone.MatchString(to) }
 var otp = regexp.MustCompile(`(?:^|[^[:alnum:]])([0-9]{4,8})(?:$|[^[:alnum:]])`)
 
 func New(in Input, source string) (Message, error) {
+	if in.Inbox == "" {
+		in.Inbox = "local"
+	}
 	in.To = strings.TrimSpace(in.To)
 	in.From = strings.TrimSpace(in.From)
 	if !phone.MatchString(in.To) || in.From == "" || utf8.RuneCountInString(in.From) > 64 ||
@@ -73,6 +95,7 @@ func New(in Input, source string) (Message, error) {
 		return Message{}, ErrInvalid
 	}
 	return Message{
+		Inbox: in.Inbox, Tags: []string{},
 		ID: "msg_" + rand.Text(), To: in.To, From: in.From, Body: in.Body,
 		RunID: in.RunID, Source: source, Status: "captured",
 		CreatedAt: time.Now().UTC(), Analysis: Analyze(in.Body),
@@ -86,6 +109,7 @@ func Analyze(body string) Analysis {
 	const basic = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"
 	const extension = "\f^{}\\[~]|€"
 	a := Analysis{Encoding: "GSM-7", Characters: utf8.RuneCountInString(body)}
+	seen := make(map[rune]bool)
 	for _, r := range body {
 		switch {
 		case strings.ContainsRune(basic, r):
@@ -94,6 +118,10 @@ func Analyze(body string) Analysis {
 			a.Units += 2
 		default:
 			a.Encoding = "UTF-16"
+			if !seen[r] {
+				a.NonGSM = append(a.NonGSM, string(r))
+				seen[r] = true
+			}
 		}
 	}
 	single, multi := 160, 153

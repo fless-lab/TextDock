@@ -14,7 +14,10 @@
 ```text
 cmd/textdock/             Configuration, listener, lifecycle, dependency wiring
 internal/message/        Canonical model, validation, encoding and OTP analysis
-internal/storage/        SQLite repository and version-1 schema
+internal/storage/        SQLite adapters, transactional migrations and snapshots
+internal/workspace/      Project/inbox persistence contract
+internal/cli/            Scriptable API clients and backup/restore commands
+internal/config/         Strict JSON runtime configuration
 internal/connect/        Scoped device credentials and pairing repository contract
 internal/events/         Scoped/coalesced invalidation hub
 internal/httpapi/        HTTP boundary, JSON API, Twilio create subset, token auth
@@ -48,8 +51,11 @@ state handles theme, selection and separate desktop/device credentials. A
 fetch-based SSE hook reconnects with bearer headers and invalidates scoped
 queries; every new connection starts with a full resync. Requests are cancelled
 on scope/search changes, preventing stale search responses.
-The API returns at most 200 rows, and the UI displays the newest 100; cursor
-pagination belongs to v0.3. There is no automatic retention in v0.1.
+The API returns at most 200 rows and the UI renders 100 per cursor page.
+v0.3 adds project/inbox scope, metadata filters, consistent SQLite snapshots and
+optional retention. Every connection re-applies foreign-key enforcement; a
+separate keeper connection preserves memory databases during cancellation-driven
+request-connection recycling.
 
 ## Planned modules, added with their first working feature
 
@@ -59,7 +65,7 @@ These are architecture decisions, **not empty packages pretending to work**.
 |---|---|---|
 | `connect` | One-use pair codes, hashed device credentials, scopes, revocation | Implemented v0.2 |
 | `events` | Append-only lifecycle timeline, SSE notifications with resync | v0.2–v0.4 |
-| `workspace` | Local projects, inboxes, test runs, scoped access | v0.3 |
+| `workspace` | Local projects, inboxes, test runs, scoped access | Implemented v0.3 |
 | `simulation` | Seeded scenarios, virtual clock, failure/rate/latency rules | v0.4 |
 | `webhook` | Durable outbox, signing adapters, delivery attempts and replay | v0.4 |
 | `providers` | Per-provider request/error/receipt normalization and capabilities | v0.5 |

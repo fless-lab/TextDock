@@ -19,6 +19,10 @@ import {
   Sun,
   Terminal,
   Trash2,
+  Star,
+  FolderOpen,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { api, APIError, type Info, type Message } from "./api";
 import "./styles.css";
@@ -27,6 +31,10 @@ import { ConnectDialog } from "./components/ConnectDialog";
 import { PhoneApp } from "./PhoneApp";
 import { useLiveEvents } from "./hooks/useLiveEvents";
 import { copyText } from "./clipboard";
+import {
+  WorkspacesDialog,
+  type Workspaces,
+} from "./components/WorkspacesDialog";
 
 function App() {
   const [info, setInfo] = useState<Info>();
@@ -37,9 +45,25 @@ function App() {
   const [selected, setSelected] = useState<string>();
   const [query, setQuery] = useState("");
   const [otpOnly, setOtpOnly] = useState(false);
+  const [inbox, setInbox] = useState("local");
+  const [workspaces, setWorkspaces] = useState<Workspaces>({
+    projects: [{ id: "default", name: "Local project" }],
+    inboxes: [{ id: "local", project_id: "default", name: "Inbox" }],
+  });
+  const [favorites, setFavorites] = useState(false);
+  const [filters, setFilters] = useState({
+    to: "",
+    run_id: "",
+    tag: "",
+    since: "",
+  });
+  const [cursors, setCursors] = useState<string[]>([]);
+  const [nextCursor, setNextCursor] = useState("");
+  const [checked, setChecked] = useState<string[]>([]);
+  const cursor = cursors.at(-1) || "";
   const [refresh, setRefresh] = useState(0);
   const [modal, setModal] = useState<
-    "compose" | "connect" | "settings" | "integrate"
+    "compose" | "connect" | "settings" | "integrate" | "workspaces" | "commands"
   >();
   const [tab, setTab] = useState<"message" | "json">("message");
   const [busy, setBusy] = useState(false);
@@ -49,6 +73,39 @@ function App() {
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
   );
   const search = useRef<HTMLInputElement>(null);
+  const parameters = new URLSearchParams({
+    inbox,
+    q: query,
+    cursor,
+    otp: String(otpOnly),
+    favorite: String(favorites),
+    to: filters.to,
+    run_id: filters.run_id,
+    tag: filters.tag,
+  });
+  if (filters.since)
+    parameters.set("since", new Date(filters.since).toISOString());
+  const queryString = parameters.toString();
+  function resetPage() {
+    setCursors([]);
+    setSelected(undefined);
+    setChecked([]);
+  }
+  function chooseInbox(id: string) {
+    setInbox(id);
+    setFilters({ to: "", run_id: "", tag: "", since: "" });
+    setQuery("");
+    setFavorites(false);
+    setOtpOnly(false);
+    resetPage();
+    setRefresh((n) => n + 1);
+  }
+  useEffect(() => {
+    if (info && !locked)
+      void api<Workspaces>("/workspaces")
+        .then(setWorkspaces)
+        .catch((e) => setError(e.message));
+  }, [info, locked, refresh]);
   const live = useLiveEvents(
     info && !locked ? "/api/v1/events" : undefined,
     sessionStorage.getItem("textdock-token"),
@@ -66,6 +123,13 @@ function App() {
   }, [theme]);
   useEffect(() => {
     const shortcut = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !locked) {
+        e.preventDefault();
+        setModal((current) =>
+          current === "commands" ? undefined : "commands",
+        );
+        return;
+      }
       const target = e.target as HTMLElement;
       if (
         e.key === "/" &&
@@ -107,12 +171,13 @@ function App() {
     const controller = new AbortController();
     async function poll() {
       try {
-        const data = await api<{ messages: Message[] }>(
-          `/messages?q=${encodeURIComponent(query)}`,
+        const data = await api<{ messages: Message[]; next_cursor: string }>(
+          `/messages?${queryString}`,
           { signal: controller.signal },
         );
         if (!stopped) {
           setMessages(data.messages);
+          setNextCursor(data.next_cursor);
           setError("");
         }
       } catch (e) {
@@ -131,9 +196,9 @@ function App() {
       clearTimeout(debounce);
       controller.abort();
     };
-  }, [info, locked, query, refresh, live.revision]);
+  }, [info, locked, queryString, refresh, live.revision]);
 
-  const visible = messages.filter((m) => !otpOnly || m.analysis.otp);
+  const visible = messages;
   const current = visible.find((m) => m.id === selected);
 
   async function copy(text: string) {
@@ -150,10 +215,13 @@ function App() {
     try {
       const m = await api<Message>("/messages", {
         method: "POST",
-        body: JSON.stringify(Object.fromEntries(data)),
+        body: JSON.stringify({ ...Object.fromEntries(data), inbox }),
       });
       setQuery("");
       setOtpOnly(false);
+      setFavorites(false);
+      setFilters({ to: "", run_id: "", tag: "", since: "" });
+      resetPage();
       setMessages((previous) => [
         m,
         ...previous.filter((item) => item.id !== m.id),
@@ -193,13 +261,64 @@ function App() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  async function update(
+    m: Message,
+    patch: { favorite?: boolean; tags?: string[] },
+  ) {
+    try {
+      const updated = await api<Message>(`/messages/${m.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      });
+      setMessages((items) =>
+        items.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setRefresh((n) => n + 1);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  async function deleteChecked() {
+    setBusy(true);
+    try {
+      await api("/messages/delete", {
+        method: "POST",
+        body: JSON.stringify({ ids: checked }),
+      });
+      resetPage();
+      setRefresh((n) => n + 1);
+      setNotice("Selected messages deleted.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function exportPage() {
+    try {
+      const token = sessionStorage.getItem("textdock-token");
+      const response = await fetch(`/api/v1/export?${queryString}&format=csv`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) throw new Error("Export failed");
+      const url = URL.createObjectURL(await response.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "textdock.csv";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   const curl = [
     `curl ${location.origin}/api/v1/messages`,
     "  -H 'Content-Type: application/json'",
     ...(info?.auth_enabled
       ? ["  -H 'Authorization: Bearer YOUR_TEXTDOCK_TOKEN'"]
       : []),
-    `  -d '{"to":"+33612345678","from":"Acme","body":"Your code is 482193","run_id":"signup-1"}'`,
+    `  -d '{"inbox":"${inbox}","to":"+33612345678","from":"Acme","body":"Your code is 482193","run_id":"signup-1"}'`,
   ].join(" \\\n");
 
   if (locked)
@@ -253,9 +372,11 @@ function App() {
         </a>
         <nav aria-label="Workspace">
           <button
-            className={!otpOnly ? "nav-item active" : "nav-item"}
+            className={!otpOnly && !favorites ? "nav-item active" : "nav-item"}
             onClick={() => {
               setOtpOnly(false);
+              setFavorites(false);
+              resetPage();
               setSelected(undefined);
             }}
           >
@@ -266,11 +387,24 @@ function App() {
             className={otpOnly ? "nav-item active" : "nav-item"}
             onClick={() => {
               setOtpOnly(true);
+              setFavorites(false);
+              resetPage();
               setSelected(undefined);
             }}
           >
             <KeyRound size={18} />
             OTP codes
+          </button>
+          <button
+            className={favorites ? "nav-item active" : "nav-item"}
+            onClick={() => {
+              setFavorites(true);
+              setOtpOnly(false);
+              resetPage();
+            }}
+          >
+            <Star size={18} />
+            Favorites
           </button>
           <button className="nav-item" onClick={() => setModal("integrate")}>
             <Code2 size={18} />
@@ -301,7 +435,32 @@ function App() {
 
       <main className="main">
         <header className="topbar">
-          <div className="breadcrumb">Local workspace</div>
+          <div className="workspace-picker">
+            <select
+              aria-label="Inbox"
+              value={inbox}
+              onChange={(e) => chooseInbox(e.target.value)}
+            >
+              {workspaces.projects.map((project) => (
+                <optgroup key={project.id} label={project.name}>
+                  {workspaces.inboxes
+                    .filter((item) => item.project_id === project.id)
+                    .map((item) => (
+                      <option value={item.id} key={item.id}>
+                        {project.name} / {item.name}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              className="icon-button"
+              aria-label="Manage projects"
+              onClick={() => setModal("workspaces")}
+            >
+              <FolderOpen size={17} />
+            </button>
+          </div>
           <div className="connection">
             <span
               className={
@@ -322,7 +481,11 @@ function App() {
         <section className="page-heading">
           <div>
             <h1>
-              {otpOnly ? "OTP codes" : "Message inbox"}
+              {otpOnly
+                ? "OTP codes"
+                : favorites
+                  ? "Favorites"
+                  : "Message inbox"}
               <span>{visible.length}</span>
             </h1>
             <p>Captured SMS · No real delivery</p>
@@ -361,7 +524,7 @@ function App() {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setSelected(undefined);
+                resetPage();
               }}
             />
             <kbd>/</kbd>
@@ -372,45 +535,140 @@ function App() {
           </span>
         </div>
 
+        <div className="filter-toolbar">
+          <details className="filter-menu">
+            <summary>
+              Filters{Object.values(filters).some(Boolean) ? " · active" : ""}
+            </summary>
+            <div className="filter-fields">
+              {(["to", "run_id", "tag", "since"] as const).map((key) => (
+                <label key={key}>
+                  {
+                    {
+                      to: "Recipient",
+                      run_id: "Test run",
+                      tag: "Tag",
+                      since: "Received since",
+                    }[key]
+                  }
+                  <input
+                    type={key === "since" ? "datetime-local" : "text"}
+                    value={filters[key]}
+                    onChange={(e) => {
+                      setFilters((previous) => ({
+                        ...previous,
+                        [key]: e.target.value,
+                      }));
+                      resetPage();
+                    }}
+                  />
+                </label>
+              ))}
+              <button
+                className="text-button"
+                onClick={() => {
+                  setFilters({ to: "", run_id: "", tag: "", since: "" });
+                  resetPage();
+                }}
+              >
+                Clear filters
+              </button>
+            </div>
+          </details>
+          <button
+            className="text-button"
+            onClick={() => {
+              void exportPage();
+            }}
+          >
+            <Download size={14} />
+            Export page
+          </button>
+          {checked.length > 0 && (
+            <button
+              className="text-button danger"
+              disabled={busy}
+              onClick={() => {
+                void deleteChecked();
+              }}
+            >
+              <Trash2 size={14} />
+              Delete selected ({checked.length})
+            </button>
+          )}
+        </div>
+
         <div className={`inbox-layout ${current ? "has-selection" : ""}`}>
           <section className="message-list" aria-label="Messages">
             <div className="list-heading">
-              <span>{otpOnly ? "With OTP" : "Latest messages"}</span>
-              <span>{visible.length} shown · max 100</span>
+              <label className="select-all">
+                <input
+                  type="checkbox"
+                  aria-label="Select page"
+                  checked={
+                    visible.length > 0 &&
+                    visible.every((m) => checked.includes(m.id))
+                  }
+                  onChange={(e) =>
+                    setChecked(e.target.checked ? visible.map((m) => m.id) : [])
+                  }
+                />
+                {otpOnly ? "With OTP" : "Latest messages"}
+              </label>
+              <span>{visible.length} on this page</span>
             </div>
             {visible.length ? (
               visible.map((m) => (
-                <button
-                  key={m.id}
-                  className={`message-row ${current?.id === m.id ? "selected" : ""}`}
-                  onClick={() => {
-                    setSelected(m.id);
-                    setTab("message");
-                  }}
-                >
-                  <span className="message-summary">
-                    <span className="row-title">
-                      <strong>{m.to}</strong>
-                      <time>
-                        {new Date(m.created_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
+                <div key={m.id} className="message-item">
+                  <input
+                    className="message-checkbox"
+                    type="checkbox"
+                    aria-label={`Select message ${m.id}`}
+                    checked={checked.includes(m.id)}
+                    onChange={(e) =>
+                      setChecked((previous) =>
+                        e.target.checked
+                          ? [...previous, m.id]
+                          : previous.filter((id) => id !== m.id),
+                      )
+                    }
+                  />
+                  <button
+                    className={`message-row ${current?.id === m.id ? "selected" : ""}`}
+                    onClick={() => {
+                      setSelected(m.id);
+                      setTab("message");
+                    }}
+                  >
+                    <span className="message-summary">
+                      <span className="row-title">
+                        <strong>
+                          {m.to}
+                          {m.favorite && (
+                            <Star className="favorite-mark" size={12} />
+                          )}
+                        </strong>
+                        <time>
+                          {new Date(m.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </time>
+                      </span>
+                      <span className="row-body">{m.body}</span>
+                      <span className="row-tags">
+                        <span className="tag">{m.from}</span>
+                        {m.analysis.otp && (
+                          <span className="otp-tag">
+                            <KeyRound size={11} />
+                            OTP
+                          </span>
+                        )}
+                        <span className="source-label">{m.source}</span>
+                      </span>
                     </span>
-                    <span className="row-body">{m.body}</span>
-                    <span className="row-tags">
-                      <span className="tag">{m.from}</span>
-                      {m.analysis.otp && (
-                        <span className="otp-tag">
-                          <KeyRound size={11} />
-                          OTP
-                        </span>
-                      )}
-                      <span className="source-label">{m.source}</span>
-                    </span>
-                  </span>
-                </button>
+                  </button>
+                </div>
               ))
             ) : (
               <div className="list-empty">
@@ -433,6 +691,33 @@ function App() {
                 </button>
               </div>
             )}
+            <div className="pagination">
+              <button
+                className="icon-button"
+                aria-label="Previous page"
+                disabled={!cursors.length}
+                onClick={() => {
+                  setCursors((stack) => stack.slice(0, -1));
+                  setSelected(undefined);
+                  setChecked([]);
+                }}
+              >
+                <ChevronLeft size={17} />
+              </button>
+              <span>Page {cursors.length + 1}</span>
+              <button
+                className="icon-button"
+                aria-label="Next page"
+                disabled={!nextCursor}
+                onClick={() => {
+                  setCursors((stack) => [...stack, nextCursor]);
+                  setSelected(undefined);
+                  setChecked([]);
+                }}
+              >
+                <ChevronRight size={17} />
+              </button>
+            </div>
           </section>
 
           <section className="detail" aria-label="Message details">
@@ -451,6 +736,22 @@ function App() {
                     <span>From {current.from}</span>
                   </div>
                   <div className="detail-actions">
+                    <button
+                      className="icon-button"
+                      aria-label={
+                        current.favorite
+                          ? "Remove from favorites"
+                          : "Add to favorites"
+                      }
+                      onClick={() => {
+                        void update(current, { favorite: !current.favorite });
+                      }}
+                    >
+                      <Star
+                        size={17}
+                        fill={current.favorite ? "currentColor" : "none"}
+                      />
+                    </button>
                     <button
                       className="icon-button"
                       onClick={() => download(current)}
@@ -556,7 +857,17 @@ function App() {
                           </strong>
                         </div>
                       </div>
+                      {current.analysis.non_gsm?.length ? (
+                        <p className="encoding-note">
+                          Unicode encoding triggered by:{" "}
+                          <code>{current.analysis.non_gsm.join(" ")}</code>
+                        </p>
+                      ) : null}
                       <dl className="metadata">
+                        <div>
+                          <dt>Inbox</dt>
+                          <dd>{current.inbox}</dd>
+                        </div>
                         <div>
                           <dt>Message ID</dt>
                           <dd>{current.id}</dd>
@@ -574,6 +885,44 @@ function App() {
                           <dd>Not sent</dd>
                         </div>
                       </dl>
+                      <form
+                        key={current.id + current.tags.join(",")}
+                        className="tags-editor"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const raw = String(
+                            new FormData(e.currentTarget).get("tags") || "",
+                          );
+                          void update(current, {
+                            tags: raw
+                              .split(",")
+                              .map((tag) => tag.trim())
+                              .filter(Boolean),
+                          });
+                        }}
+                      >
+                        <label>
+                          Tags
+                          <input
+                            name="tags"
+                            defaultValue={current.tags.join(", ")}
+                            placeholder="Comma-separated tags"
+                          />
+                        </label>
+                        <button className="secondary">Save tags</button>
+                      </form>
+                      <button
+                        className="text-button"
+                        onClick={() => {
+                          setFilters((previous) => ({
+                            ...previous,
+                            to: current.to,
+                          }));
+                          resetPage();
+                        }}
+                      >
+                        View conversation with this recipient
+                      </button>
                     </>
                   )}
                 </div>
@@ -704,7 +1053,36 @@ function App() {
         </Modal>
       )}
       {modal === "connect" && (
-        <ConnectDialog close={() => setModal(undefined)} />
+        <ConnectDialog inbox={inbox} close={() => setModal(undefined)} />
+      )}
+      {modal === "workspaces" && (
+        <WorkspacesDialog
+          data={workspaces}
+          select={chooseInbox}
+          close={() => setModal(undefined)}
+        />
+      )}
+      {modal === "commands" && (
+        <Modal title="Commands" close={() => setModal(undefined)}>
+          <div className="command-list">
+            <button onClick={() => setModal("compose")}>Send test SMS</button>
+            <button onClick={() => setModal("connect")}>Connect a phone</button>
+            <button onClick={() => setModal("workspaces")}>
+              Manage projects and inboxes
+            </button>
+            <button onClick={() => setModal("integrate")}>
+              API integration
+            </button>
+            <button
+              onClick={() => {
+                setTheme(theme === "dark" ? "light" : "dark");
+                setModal(undefined);
+              }}
+            >
+              Toggle theme
+            </button>
+          </div>
+        </Modal>
       )}
       {modal === "settings" && (
         <Modal title="Local workspace" close={() => setModal(undefined)}>

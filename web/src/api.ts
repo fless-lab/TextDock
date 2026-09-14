@@ -1,5 +1,8 @@
 export interface Message {
   id: string;
+  inbox: string;
+  favorite: boolean;
+  tags: string[];
   to: string;
   from: string;
   body: string;
@@ -13,6 +16,7 @@ export interface Message {
     characters: number;
     segments: number;
     otp?: string;
+    non_gsm?: string[];
   };
 }
 

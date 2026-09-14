@@ -1,0 +1,145 @@
+openapi: 3.1.0
+info:
+  title: TextDock workspace API
+  version: 0.3.0
+  description: Local projects, inboxes and bounded bulk operations. Desktop authorization only.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security:
+  - {}
+  - bearerAuth: []
+paths:
+  /api/v1/workspaces:
+    get:
+      operationId: listWorkspaces
+      summary: List local projects and inboxes
+      responses:
+        '200':
+          description: All configured local workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects: { type: array, items: { $ref: '#/components/schemas/Project' } }
+                  inboxes: { type: array, items: { $ref: '#/components/schemas/Inbox' } }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/projects:
+    post:
+      operationId: createProject
+      summary: Create a project and its initial inbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        '201':
+          description: Project and initial inbox
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project: { $ref: '#/components/schemas/Project' }
+                  inbox: { $ref: '#/components/schemas/Inbox' }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/v1/inboxes:
+    post:
+      operationId: createInbox
+      summary: Add an inbox to a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, project_id]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+                project_id: { type: string }
+      responses:
+        '201':
+          description: Created inbox
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Inbox' }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/v1/inboxes/{id}/purge:
+    post:
+      operationId: purgeInbox
+      summary: Permanently remove all messages in an inbox
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/Deleted' }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/messages/delete:
+    post:
+      operationId: deleteMessages
+      summary: Delete a bounded batch of message IDs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids: { type: array, minItems: 1, maxItems: 200, items: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/Deleted' }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/v1/export:
+    get:
+      operationId: exportMessagePage
+      summary: Export one filtered page (use CLI for a full traversal)
+      parameters:
+        - { name: format, in: query, schema: { type: string, enum: [json, csv], default: json } }
+        - { $ref: './openapi.yaml#/components/parameters/Inbox' }
+        - { $ref: './openapi.yaml#/components/parameters/Cursor' }
+        - { $ref: './openapi.yaml#/components/parameters/Limit' }
+        - { $ref: './openapi.yaml#/components/parameters/Query' }
+      responses:
+        '200':
+          description: Downloadable JSON object or CSV page; list filters also apply.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages: { type: array, items: { $ref: './openapi.yaml#/components/schemas/Message' } }
+                  next_cursor: { type: string }
+            text/csv:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  responses:
+    Error: { $ref: './openapi.yaml#/components/responses/Error' }
+    Deleted:
+      description: Number of deleted messages
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              deleted: { type: integer, minimum: 0 }
+  schemas:
+    Project:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+    Inbox:
+      type: object
+      properties:
+        id: { type: string }
+        project_id: { type: string }
+        name: { type: string }

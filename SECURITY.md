@@ -13,8 +13,9 @@ strings and message contents are not included in routine request logs.
 
 Messages and OTPs are stored unencrypted in SQLite until individually deleted
 or the data directory is removed while the server is stopped. Filesystem access
-and backups therefore have access to the contents. Automatic retention and
-encrypted storage are not v0.1 features. Use synthetic data for development.
+and backups therefore have access to the contents. v0.3 offers opt-in automatic
+retention; it is disabled by default. Storage is not encrypted. Use synthetic
+data for development.
 
 For remote connections, put TextDock behind HTTPS and an appropriate access
 boundary. A shared-token local deployment is not a public SaaS installation.

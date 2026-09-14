@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock capture API
-  version: 0.2.0
+  version: 0.3.0
   description: Local SMS capture. Bearer authentication is required only when TEXTDOCK_TOKEN is configured. No real SMS is sent.
   license:
     name: MIT
@@ -69,6 +69,11 @@ paths:
       summary: List newest matching messages
       parameters:
         - { $ref: '#/components/parameters/Query' }
+        - { $ref: '#/components/parameters/Inbox' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { name: favorite, in: query, schema: { type: boolean } }
+        - { name: otp, in: query, schema: { type: boolean } }
+        - { name: tag, in: query, schema: { type: string } }
         - { $ref: '#/components/parameters/To' }
         - { $ref: '#/components/parameters/RunID' }
         - { $ref: '#/components/parameters/Since' }
@@ -86,10 +91,34 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/Message' }
                   limit: { type: integer, minimum: 1, maximum: 200 }
+                  next_cursor: { type: string, description: Empty when no further page is available. }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
         default: { $ref: '#/components/responses/Error' }
   /api/v1/messages/{id}:
+    patch:
+      operationId: updateMessageMetadata
+      summary: Edit favorites and tags
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                favorite: { type: boolean }
+                tags: { type: array, maxItems: 10, items: { type: string, minLength: 1, maxLength: 32 } }
+      responses:
+        '200':
+          description: Updated message
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
     delete:
       operationId: deleteMessage
       summary: Permanently delete one captured message
@@ -108,6 +137,7 @@ paths:
       operationId: waitForOTP
       summary: Wait for a detected OTP in one recipient and test run
       parameters:
+        - { $ref: '#/components/parameters/Inbox' }
         - name: to
           in: query
           required: true
@@ -133,7 +163,7 @@ paths:
                 type: object
                 required: [code, message_id]
                 properties:
-                  code: { type: string, pattern: '^[0-9]{4,8}$' }
+                  code: { type: string, description: Default numeric candidate or first group of configured OTP pattern. }
                   message_id: { type: string }
         '404': { $ref: '#/components/responses/Error' }
         default: { $ref: '#/components/responses/Error' }
@@ -143,6 +173,15 @@ components:
       type: http
       scheme: bearer
   parameters:
+    Inbox:
+      name: inbox
+      in: query
+      schema: { type: string, default: local }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+      description: Opaque next_cursor from the preceding page; keep other filters unchanged.
     Query:
       name: q
       in: query
@@ -182,6 +221,7 @@ components:
       additionalProperties: false
       required: [to, from, body]
       properties:
+        inbox: { type: string, default: local }
         to: { type: string, pattern: '^\+[1-9][0-9]{6,14}$' }
         from: { type: string, minLength: 1, maxLength: 64 }
         body: { type: string, minLength: 1, maxLength: 4096 }
@@ -192,6 +232,9 @@ components:
       type: object
       required: [id, to, from, body, run_id, source, status, created_at, analysis]
       properties:
+        inbox: { type: string }
+        favorite: { type: boolean }
+        tags: { type: array, items: { type: string } }
         id: { type: string }
         to: { type: string }
         from: { type: string }
@@ -208,4 +251,5 @@ components:
             units: { type: integer, minimum: 0 }
             segments: { type: integer, minimum: 0 }
             characters: { type: integer, minimum: 0 }
-            otp: { type: string, pattern: '^[0-9]{4,8}$' }
+            otp: { type: string }
+            non_gsm: { type: array, items: { type: string }, description: Distinct characters that require Unicode encoding. }

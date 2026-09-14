@@ -22,6 +22,16 @@ func (s *Server) createPair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	code, expires := rand.Text(), time.Now().UTC().Add(2*time.Minute)
+	if scope.Inbox == "" {
+		scope.Inbox = "local"
+	}
+	if exists, err := s.Workspaces.InboxExists(r.Context(), scope.Inbox); err != nil {
+		internalError(w, err)
+		return
+	} else if !exists {
+		fail(w, 400, "inbox does not exist")
+		return
+	}
 	if err := s.Devices.CreatePair(r.Context(), connect.Hash(code), scope, expires); err != nil {
 		internalError(w, err)
 		return
@@ -92,18 +102,23 @@ func (s *Server) deviceAPI(w http.ResponseWriter, r *http.Request) {
 			fail(w, 403, "requested messages are outside this device's scope")
 			return
 		}
+		if r.URL.Query().Has("inbox") && f.Inbox != d.Scope.Inbox {
+			fail(w, 403, "inbox is outside this device's scope")
+			return
+		}
+		f.Inbox = d.Scope.Inbox
 		f.To = d.Scope.To
 		if d.Scope.RunID != "" {
 			f.RunID = d.Scope.RunID
 		}
-		items, err := s.Store.List(r.Context(), f)
+		items, next, err := s.page(r, f)
 		if err != nil {
 			internalError(w, err)
 			return
 		}
-		writeJSON(w, 200, map[string]any{"messages": items, "limit": f.Limit})
+		writeJSON(w, 200, map[string]any{"messages": items, "limit": f.Limit, "next_cursor": next})
 	case "/connect/v1/events":
-		s.stream(w, r, events.Filter{To: d.Scope.To, RunID: d.Scope.RunID, DeviceID: d.ID}, d.ExpiresAt)
+		s.stream(w, r, events.Filter{Inbox: d.Scope.Inbox, To: d.Scope.To, RunID: d.Scope.RunID, DeviceID: d.ID}, d.ExpiresAt)
 	default:
 		fail(w, 404, "device endpoint not found")
 	}

@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -21,17 +22,20 @@ import (
 	"github.com/fless-lab/TextDock/internal/connect"
 	"github.com/fless-lab/TextDock/internal/events"
 	"github.com/fless-lab/TextDock/internal/message"
+	"github.com/fless-lab/TextDock/internal/workspace"
 )
 
 type Server struct {
-	Store     message.Repository
-	Token     string
-	Version   string
-	UI        fs.FS
-	Devices   connect.Repository
-	Hub       events.Hub
-	Listen    string
-	PublicURL string
+	Store      message.Repository
+	Token      string
+	Version    string
+	UI         fs.FS
+	Devices    connect.Repository
+	Workspaces workspace.Repository
+	Hub        events.Hub
+	Listen     string
+	PublicURL  string
+	OTPPattern *regexp.Regexp
 }
 
 func (s *Server) Handler() http.Handler {
@@ -113,6 +117,9 @@ func (s *Server) authorize(next http.Handler) http.Handler {
 }
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request) {
+	if s.workspaceAPI(w, r) {
+		return
+	}
 	switch {
 	case r.Method == "GET" && r.URL.Path == "/api/v1/network":
 		s.network(w, r)
@@ -155,12 +162,12 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 			fail(w, 400, err.Error())
 			return
 		}
-		items, err := s.Store.List(r.Context(), f)
+		items, next, err := s.page(r, f)
 		if err != nil {
 			internalError(w, err)
 			return
 		}
-		writeJSON(w, 200, map[string]any{"messages": items, "limit": f.Limit})
+		writeJSON(w, 200, map[string]any{"messages": items, "limit": f.Limit, "next_cursor": next})
 	case r.Method == "GET" && r.URL.Path == "/api/v1/otp":
 		s.waitOTP(w, r)
 	case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/v1/messages/"):
@@ -183,7 +190,7 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 			fail(w, 404, "message not found")
 			return
 		}
-		s.Hub.Changed(m.To, m.RunID)
+		s.Hub.Changed(m.Inbox, m.To, m.RunID)
 		w.WriteHeader(204)
 	default:
 		fail(w, 404, "endpoint not found")
@@ -191,6 +198,18 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) capture(w http.ResponseWriter, r *http.Request, in message.Input, source string, twilio bool) {
+	if in.Inbox == "" {
+		in.Inbox = "local"
+	}
+	exists, err := s.Workspaces.InboxExists(r.Context(), in.Inbox)
+	if err != nil {
+		internalError(w, err)
+		return
+	}
+	if !exists {
+		fail(w, 400, "inbox does not exist")
+		return
+	}
 	m, err := message.New(in, source)
 	if errors.Is(err, message.ErrInvalid) {
 		fail(w, 400, "to must be E.164-shaped (+ and 7–15 digits); from is required (max 64 characters); body is required (max 4096 characters); run_id max 128 bytes")
@@ -200,11 +219,17 @@ func (s *Server) capture(w http.ResponseWriter, r *http.Request, in message.Inpu
 		internalError(w, err)
 		return
 	}
+	if s.OTPPattern != nil {
+		m.Analysis.OTP = ""
+		if match := s.OTPPattern.FindStringSubmatch(m.Body); len(match) > 1 && len(match[1]) <= 64 {
+			m.Analysis.OTP = match[1]
+		}
+	}
 	if err := s.Store.Save(r.Context(), m); err != nil {
 		internalError(w, err)
 		return
 	}
-	s.Hub.Changed(m.To, m.RunID)
+	s.Hub.Changed(m.Inbox, m.To, m.RunID)
 	if twilio {
 		sid := fmt.Sprintf("SM%x", sha256.Sum256([]byte(m.ID)))[:34]
 		writeJSON(w, 201, map[string]any{
@@ -233,12 +258,29 @@ func (s *Server) twilio(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	s.capture(w, r, message.Input{To: r.PostForm.Get("To"), From: r.PostForm.Get("From"), Body: r.PostForm.Get("Body")}, "twilio", true)
+	s.capture(w, r, message.Input{Inbox: r.Header.Get("X-TextDock-Inbox"), To: r.PostForm.Get("To"), From: r.PostForm.Get("From"), Body: r.PostForm.Get("Body")}, "twilio", true)
 }
 
 func filter(r *http.Request) (message.Filter, error) {
 	q := r.URL.Query()
 	f := message.Filter{Query: q.Get("q"), To: q.Get("to"), RunID: q.Get("run_id"), Limit: 100}
+	f.Inbox = q.Get("inbox")
+	if f.Inbox == "" {
+		f.Inbox = "local"
+	}
+	f.Tag = q.Get("tag")
+	for key, target := range map[string]*bool{"favorite": &f.Favorite, "otp": &f.OTPOnly} {
+		if q.Has(key) {
+			v, err := strconv.ParseBool(q.Get(key))
+			if err != nil {
+				return f, fmt.Errorf("%s must be a boolean", key)
+			}
+			*target = v
+		}
+	}
+	if err := decodeCursor(q.Get("cursor"), &f); err != nil {
+		return f, err
+	}
 	if q.Has("limit") {
 		n, err := strconv.Atoi(q.Get("limit"))
 		if err != nil || n < 1 || n > 200 {

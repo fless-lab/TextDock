@@ -5,6 +5,29 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-14
+
+### Added
+
+- Projects and inboxes with backwards-compatible `local` capture defaults.
+- Stable cursor pagination, recipient/run/tag/date filters and server-side OTP/favorite views.
+- Favorite editing, tags, recipient conversation filter, batch deletion and CSV page export.
+- CLI send/list/wait/purge, streaming JSON/JSONL/CSV export and SQLite backup/restore.
+- Strict JSON configuration, opt-in retention and custom RE2 OTP extraction.
+- Unicode-trigger diagnostics, command palette and dependency-free test helper.
+- v2→v3 migration for projects and inbox-bound phone credentials.
+- Tests over 100,000 messages, snapshot integrity, CLI workflows and cross-inbox phone isolation.
+
+### Fixed
+
+- In-memory databases now survive connection recycling after request cancellation.
+- SQLite foreign-key enforcement is restored on every replacement connection.
+
+### Upgrade
+
+- Existing messages and paired devices belong to the `local` inbox after migration.
+- Back up before upgrading. Older binaries cannot safely manage the new workspace schema.
+
 ## [0.2.0] - 2026-09-14
 
 ### Added
