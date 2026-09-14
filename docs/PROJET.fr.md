@@ -14,6 +14,10 @@ La v0.1 est publiée sur GitHub avec binaires et image Docker via la CI.
 exports et commandes CLI sont disponibles, avec sauvegarde/restauration SQLite,
 rétention optionnelle, extraction OTP configurable et vérifications d'accessibilité.
 
+**Avancement v0.4 :** scénarios déterministes, statuts simulés, messages entrants,
+callbacks signés, retries persistants et inspection/rejeu des tentatives. Les
+versions v0.1, v0.2 et v0.3 sont publiées avec CI verte.
+
 ## Ce que contient la v0.1.0
 
 La capture fonctionne réellement : API JSON, petit sous-ensemble Twilio testé,

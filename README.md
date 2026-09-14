@@ -70,7 +70,7 @@ The OTP endpoint returns `{"code":"482193","message_id":"msg_…"}`. The
 application remains responsible for generating, expiring and verifying codes.
 Extraction is a heuristic for 4–8 digit candidates, not an authentication service.
 
-## Available in v0.3.0
+## Available in v0.4.0
 
 - Persistent SQLite inbox and responsive desktop/phone UI, light and dark themes.
 - JSON capture API, search, recipient/run/time filters, per-message JSON export
@@ -85,10 +85,11 @@ Extraction is a heuristic for 4–8 digit candidates, not an authentication serv
 - Projects/inboxes, favorites, tags, conversation filters and bulk actions.
 - CLI workflows, full JSON/JSONL/CSV export, SQLite snapshots and opt-in retention.
 - JSON configuration, custom OTP patterns and Unicode-trigger diagnostics.
+- Seeded delivery scenarios, incoming SMS simulation and persistent status history.
+- Signed webhooks with durable retries, attempt inspection and manual replay.
 - Binaries and Docker release workflow, automated API and browser checks.
 
-**Not yet implemented:** push notifications, lifecycle
-simulation/webhooks, real SMS relays, provider-neutral production SDKs and hosted
+**Not yet implemented:** push notifications, real SMS relays, provider-neutral production SDKs and hosted
 accounts. See the version-by-version [roadmap](docs/ROADMAP.md).
 
 ## Configuration
@@ -127,6 +128,7 @@ for HTTP; remote access needs HTTPS. Details: [mobile and autofill](docs/MOBILE-
 - [Architecture and hosted evolution](docs/ARCHITECTURE.md)
 - [UI design direction](docs/UI.md)
 - [Projects, CLI, backups and test recipes](docs/DEVELOPER-WORKFLOW.md)
+- [Delivery simulation and webhooks](docs/SIMULATION.md)
 - [Versioned roadmap and acceptance criteria](docs/ROADMAP.md)
 - [Mobile, native SMS, WebOTP and Android/iOS](docs/MOBILE-AND-OTP.md)
 - [Phone pairing and live connections](docs/CONNECT.md)

@@ -5,6 +5,25 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-14
+
+### Added
+
+- Inbox-scoped seeded scenarios for delayed delivery, failures, expiry and HTTP rejection.
+- Persistent message lifecycle history and incoming SMS simulation.
+- Transactional outbox with ordered transitions, recoverable leases and stale-worker fencing.
+- JSON/HMAC-SHA256 and Twilio/HMAC-SHA1 callbacks, bounded retries and manual replay.
+- Request/response inspection, status filtering and CLI simulation options.
+- Scenario editor and message Events tab with live updates.
+- Crash/restart, signature, retry/replay, rejection and cascade-deletion tests.
+
+### Changed
+
+- Capture orchestration is now an application service, independent of HTTP handlers.
+- Database schema v4 stores lifecycle events, scenarios, jobs and callback attempts.
+- `/api/v1/info` reports `mode: local`; each message identifies capture versus simulation.
+- Twilio `StatusCallback` is supported when a simulation scenario is explicitly selected.
+
 ## [0.3.0] - 2026-09-14
 
 ### Added

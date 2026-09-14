@@ -13,6 +13,8 @@ import (
 )
 
 type Message struct {
+	Mode      string    `json:"mode"`
+	Direction string    `json:"direction"`
 	ID        string    `json:"id"`
 	Inbox     string    `json:"inbox"`
 	Favorite  bool      `json:"favorite"`
@@ -37,14 +39,19 @@ type Analysis struct {
 }
 
 type Input struct {
-	Inbox string `json:"inbox,omitempty"`
-	To    string `json:"to"`
-	From  string `json:"from"`
-	Body  string `json:"body"`
-	RunID string `json:"run_id,omitempty"`
+	Mode        string `json:"mode,omitempty"`
+	Direction   string `json:"direction,omitempty"`
+	ScenarioID  string `json:"scenario_id,omitempty"`
+	CallbackURL string `json:"callback_url,omitempty"`
+	Inbox       string `json:"inbox,omitempty"`
+	To          string `json:"to"`
+	From        string `json:"from"`
+	Body        string `json:"body"`
+	RunID       string `json:"run_id,omitempty"`
 }
 
 type Filter struct {
+	Status   string
 	Inbox    string
 	Before   time.Time
 	BeforeID string
@@ -84,6 +91,18 @@ func ValidRecipient(to string) bool { return phone.MatchString(to) }
 var otp = regexp.MustCompile(`(?:^|[^[:alnum:]])([0-9]{4,8})(?:$|[^[:alnum:]])`)
 
 func New(in Input, source string) (Message, error) {
+	if in.Mode == "" {
+		in.Mode = "capture"
+	}
+	if in.Mode != "capture" && in.Mode != "simulate" {
+		return Message{}, ErrInvalid
+	}
+	if in.Direction == "" {
+		in.Direction = "outbound"
+	}
+	if in.Direction != "outbound" && in.Direction != "inbound" {
+		return Message{}, ErrInvalid
+	}
 	if in.Inbox == "" {
 		in.Inbox = "local"
 	}
@@ -95,6 +114,7 @@ func New(in Input, source string) (Message, error) {
 		return Message{}, ErrInvalid
 	}
 	return Message{
+		Mode: in.Mode, Direction: in.Direction,
 		Inbox: in.Inbox, Tags: []string{},
 		ID: "msg_" + rand.Text(), To: in.To, From: in.From, Body: in.Body,
 		RunID: in.RunID, Source: source, Status: "captured",

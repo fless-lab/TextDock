@@ -21,6 +21,10 @@ The phone bearer credential does not authorize any `/api/` request.
 | DELETE | `/api/v1/messages/{id}` | 204, or 404 if absent |
 | GET | `/api/v1/otp` | `{code, message_id}`, or 404 on timeout |
 
+v0.4 adds simulation scenarios, lifecycle events, inbound messages and callback
+attempts/replay. See [SIMULATION.md](SIMULATION.md) and the
+[simulation contract](../api/simulation.openapi.yaml).
+
 Create fields: `to` (E.164-shaped `+` and 7–15 digits, no real carrier validation),
 `from` (required, up to 64 characters), `body` (nonblank, up to 4096 Unicode
 characters), optional `run_id` (up to 128 bytes). Unknown JSON fields and multiple
@@ -39,6 +43,7 @@ List filters:
 - `cursor`: opaque `next_cursor` from the preceding page, keeping filters unchanged.
 - `favorite`, `otp`: booleans to select favorites or detected-code messages.
 - `tag`: exact metadata tag.
+- `status`: exact lifecycle status, also usable when waiting for an OTP.
 
 v0.3 responses include `next_cursor`, empty on the final page.
 Project management and export routes are in [workspace OpenAPI](../api/workspace.openapi.yaml).
@@ -68,13 +73,16 @@ This is an emulation subset, not a replacement for all Twilio services.
 | Official Twilio Node SDK `messages.create` | Contract-tested |
 | Basic auth | Password is TextDock token, when enabled |
 | Real account/number ownership validation | No |
-| `StatusCallback`, media/MMS, Messaging Service SID, scheduling | Rejected with 422 |
+| `StatusCallback` with `X-TextDock-Scenario` | Simulated receipts, optional Twilio signature |
+| Media/MMS, Messaging Service SID, provider scheduling | Rejected with 422 |
 | Message fetch/list/delete in Twilio format | Not implemented |
-| Twilio Verify, inbound webhooks, delivery simulation | Not implemented |
+| Twilio Verify | Not implemented |
+| Delivery simulation | v0.4 scenarios; declared receipt subset only |
 | Full Twilio error codes/response schema | Not implemented; TextDock errors |
 
-The stored message has `status: captured`; `queued` in the Twilio response is
-only the SDK-facing acceptance representation. No delivery worker runs.
+Default stored messages have `status: captured`; `queued` is the SDK-facing
+acceptance representation. Explicit scenarios store `queued` and run the local
+simulation worker. No mobile network delivery occurs.
 
 Example in a Node application that has `twilio` installed:
 

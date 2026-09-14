@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/fless-lab/TextDock/internal/message"
+	"github.com/fless-lab/TextDock/internal/simulation"
 
 	_ "modernc.org/sqlite"
 )
@@ -91,6 +92,10 @@ func Open(path string) (*SQLite, error) {
 		cleanup()
 		return nil, err
 	}
+	if err := s.migrateSimulation(); err != nil {
+		cleanup()
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -98,13 +103,7 @@ func Open(path string) (*SQLite, error) {
 const timestamp = "2006-01-02T15:04:05.000000000Z"
 
 func (s *SQLite) Save(ctx context.Context, m message.Message) error {
-	data, err := json.Marshal(m)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO messages(id, recipient, run_id, body, created_at, payload, inbox, favorite) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		m.ID, m.To, m.RunID, m.Body, m.CreatedAt.UTC().Format(timestamp), string(data), m.Inbox, m.Favorite)
-	return err
+	return s.Schedule(ctx, m, []simulation.Job{})
 }
 
 func (s *SQLite) List(ctx context.Context, f message.Filter) ([]message.Message, error) {
@@ -120,10 +119,11 @@ func (s *SQLite) List(ctx context.Context, f message.Filter) ([]message.Message,
 		AND created_at >= ? AND (? = '' OR created_at < ? OR (created_at = ? AND id < ?))
 		AND (? = 0 OR favorite = 1) AND (? = 0 OR json_extract(payload, '$.analysis.otp') IS NOT NULL)
 		AND (? = '' OR EXISTS(SELECT 1 FROM json_each(payload, '$.tags') WHERE value = ?))
+		AND (? = '' OR json_extract(payload, '$.status') = ?)
 		ORDER BY created_at DESC, id DESC LIMIT ?`,
 		f.Inbox, f.Query, f.Query, f.Query, f.To, f.To, f.RunID, f.RunID,
 		f.Since.UTC().Format(timestamp), f.BeforeID, f.Before.UTC().Format(timestamp), f.Before.UTC().Format(timestamp), f.BeforeID,
-		f.Favorite, f.OTPOnly, f.Tag, f.Tag, f.Limit)
+		f.Favorite, f.OTPOnly, f.Tag, f.Tag, f.Status, f.Status, f.Limit)
 	if err != nil {
 		return nil, err
 	}

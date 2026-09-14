@@ -24,7 +24,7 @@ func (s *SQLite) migrateWorkspace() error {
 	if err := tx.QueryRow(`SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil {
 		return err
 	}
-	if version > 3 {
+	if version > 4 {
 		return errors.New("database schema is newer than this TextDock version")
 	}
 	if version == 2 {
@@ -178,7 +178,7 @@ func ValidateSnapshot(ctx context.Context, path string) error {
 	if err := db.QueryRowContext(ctx, `SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil {
 		return err
 	}
-	if version < 1 || version > 3 {
+	if version < 1 || version > 4 {
 		return errors.New("snapshot schema is not supported by this version")
 	}
 	return nil

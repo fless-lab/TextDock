@@ -28,7 +28,7 @@ Acceptance: scan → choose inbox → see a new message without manual refresh.
 Expired/replayed pair codes fail. A revoked phone cannot read/list/subscribe.
 The mobile session cannot delete messages or read another scope.
 
-## v0.3.0 — Daily developer workflow (implemented)
+## v0.3.0 — Daily developer workflow (released)
 
 - Projects/inboxes, test-run views, conversations, tags and favorites.
 - Cursor pagination, indexed advanced search, bulk actions and JSON/CSV export.
@@ -41,9 +41,9 @@ The mobile session cannot delete messages or read another scope.
 Acceptance: repeated parallel tests never pick an earlier run's OTP; browse a
 100k-message fixture without unbounded responses or rendering all rows at once.
 
-## v0.4.0 — Simulate the difficult cases
+## v0.4.0 — Simulate the difficult cases (implemented)
 
-- Durable event timeline: accepted, queued, sent, delivered, failed, expired.
+- Durable capture/queue acceptance timeline: queued, sent, delivered, failed, expired.
 - Seeded scenarios by recipient/prefix, delays, invalid numbers, rate limits,
   provider outages and retry-after responses.
 - Signed provider-style delivery callbacks and simulated inbound SMS.

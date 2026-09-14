@@ -15,6 +15,66 @@
   color: var(--text);
   background: var(--bg);
 }
+.event-view h3 {
+  font-size: 13px;
+  font-weight: 550;
+  margin: 0 0 18px;
+}
+.event-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 30px;
+}
+.event-list li {
+  display: grid;
+  grid-template-columns: 80px 80px 1fr;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 13px 0;
+  font-size: 11px;
+}
+.event-list time,
+.event-list span {
+  color: var(--muted);
+}
+.event-list strong {
+  font-weight: 550;
+}
+.webhook-attempt {
+  border: 1px solid var(--line);
+  padding: 13px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.webhook-attempt summary {
+  cursor: pointer;
+}
+.webhook-attempt pre {
+  font-size: 11px;
+  line-height: 1.7;
+  background: var(--canvas);
+  padding: 10px;
+}
+.webhook-url {
+  overflow-wrap: anywhere;
+  margin: 15px 0;
+}
+.webhook-attempt small {
+  color: var(--muted);
+}
+.simulation-tag {
+  font-size: 10px;
+  color: var(--accent);
+}
+@media (max-width: 680px) {
+  .event-list li {
+    grid-template-columns: 65px 1fr;
+  }
+  .event-list span {
+    grid-column: 1 / -1;
+  }
+}
 .encoding-note {
   font-size: 11px;
   color: var(--muted);

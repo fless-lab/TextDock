@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock capture API
-  version: 0.3.0
+  version: 0.4.0
   description: Local SMS capture. Bearer authentication is required only when TEXTDOCK_TOKEN is configured. No real SMS is sent.
   license:
     name: MIT
@@ -42,7 +42,7 @@ paths:
                 properties:
                   name: { type: string, const: TextDock }
                   version: { type: string }
-                  mode: { type: string, const: capture }
+                  mode: { type: string, const: local }
                   auth_enabled: { type: boolean }
         '401': { $ref: '#/components/responses/Error' }
         default: { $ref: '#/components/responses/Error' }
@@ -74,6 +74,7 @@ paths:
         - { name: favorite, in: query, schema: { type: boolean } }
         - { name: otp, in: query, schema: { type: boolean } }
         - { name: tag, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
         - { $ref: '#/components/parameters/To' }
         - { $ref: '#/components/parameters/RunID' }
         - { $ref: '#/components/parameters/Since' }
@@ -221,6 +222,10 @@ components:
       additionalProperties: false
       required: [to, from, body]
       properties:
+        mode: { type: string, enum: [capture, simulate], default: capture }
+        direction: { type: string, enum: [outbound, inbound], default: outbound }
+        scenario_id: { type: string, description: Select a scenario and enable simulation for outbound messages. }
+        callback_url: { type: string, description: Optional HTTP(S) callback override in simulation mode. }
         inbox: { type: string, default: local }
         to: { type: string, pattern: '^\+[1-9][0-9]{6,14}$' }
         from: { type: string, minLength: 1, maxLength: 64 }
@@ -232,6 +237,8 @@ components:
       type: object
       required: [id, to, from, body, run_id, source, status, created_at, analysis]
       properties:
+        mode: { type: string, enum: [capture, simulate] }
+        direction: { type: string, enum: [outbound, inbound] }
         inbox: { type: string }
         favorite: { type: boolean }
         tags: { type: array, items: { type: string } }
@@ -241,7 +248,7 @@ components:
         body: { type: string }
         run_id: { type: string }
         source: { type: string, enum: [api, twilio] }
-        status: { type: string, const: captured }
+        status: { type: string, enum: [captured, queued, sent, delivered, failed, expired, received] }
         created_at: { type: string, format: date-time }
         analysis:
           type: object

@@ -23,6 +23,7 @@ import {
   FolderOpen,
   ChevronLeft,
   ChevronRight,
+  FlaskConical,
 } from "lucide-react";
 import { api, APIError, type Info, type Message } from "./api";
 import "./styles.css";
@@ -31,6 +32,8 @@ import { ConnectDialog } from "./components/ConnectDialog";
 import { PhoneApp } from "./PhoneApp";
 import { useLiveEvents } from "./hooks/useLiveEvents";
 import { copyText } from "./clipboard";
+import { ScenariosDialog, type Scenario } from "./components/ScenariosDialog";
+import { MessageEvents } from "./components/MessageEvents";
 import {
   WorkspacesDialog,
   type Workspaces,
@@ -45,6 +48,8 @@ function App() {
   const [selected, setSelected] = useState<string>();
   const [query, setQuery] = useState("");
   const [otpOnly, setOtpOnly] = useState(false);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [composeMode, setComposeMode] = useState("capture");
   const [inbox, setInbox] = useState("local");
   const [workspaces, setWorkspaces] = useState<Workspaces>({
     projects: [{ id: "default", name: "Local project" }],
@@ -63,9 +68,15 @@ function App() {
   const cursor = cursors.at(-1) || "";
   const [refresh, setRefresh] = useState(0);
   const [modal, setModal] = useState<
-    "compose" | "connect" | "settings" | "integrate" | "workspaces" | "commands"
+    | "compose"
+    | "connect"
+    | "settings"
+    | "integrate"
+    | "workspaces"
+    | "commands"
+    | "scenarios"
   >();
-  const [tab, setTab] = useState<"message" | "json">("message");
+  const [tab, setTab] = useState<"message" | "json" | "events">("message");
   const [busy, setBusy] = useState(false);
   const [theme, setTheme] = useState(
     () =>
@@ -73,6 +84,14 @@ function App() {
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
   );
   const search = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (info && !locked)
+      void api<{ scenarios: Scenario[] }>(
+        `/scenarios?inbox=${encodeURIComponent(inbox)}`,
+      )
+        .then((data) => setScenarios(data.scenarios))
+        .catch((e) => setError(e.message));
+  }, [info, locked, inbox, refresh]);
   const parameters = new URLSearchParams({
     inbox,
     q: query,
@@ -213,10 +232,17 @@ function App() {
     setBusy(true);
     const data = new FormData(e.currentTarget);
     try {
-      const m = await api<Message>("/messages", {
-        method: "POST",
-        body: JSON.stringify({ ...Object.fromEntries(data), inbox }),
-      });
+      const m = await api<Message>(
+        composeMode === "inbound" ? "/inbound" : "/messages",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ...Object.fromEntries(data),
+            inbox,
+            mode: composeMode === "inbound" ? "simulate" : composeMode,
+          }),
+        },
+      );
       setQuery("");
       setOtpOnly(false);
       setFavorites(false);
@@ -229,7 +255,9 @@ function App() {
       setSelected(m.id);
       setModal(undefined);
       setRefresh((n) => n + 1);
-      setNotice("Message captured. No real SMS sent.");
+      setNotice(
+        composeMode === "capture" ? "Message captured." : "Simulation started.",
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -410,6 +438,10 @@ function App() {
             <Code2 size={18} />
             Integration
           </button>
+          <button className="nav-item" onClick={() => setModal("scenarios")}>
+            <FlaskConical size={18} />
+            Scenarios
+          </button>
           <button className="nav-item" onClick={() => setModal("connect")}>
             <Smartphone size={18} />
             Open on phone
@@ -488,7 +520,7 @@ function App() {
                   : "Message inbox"}
               <span>{visible.length}</span>
             </h1>
-            <p>Captured SMS · No real delivery</p>
+            <p>Local messages · No real SMS delivery</p>
           </div>
           <button
             className="primary"
@@ -657,6 +689,11 @@ function App() {
                       </span>
                       <span className="row-body">{m.body}</span>
                       <span className="row-tags">
+                        {m.mode === "simulate" && (
+                          <span className="simulation-tag">
+                            {m.direction === "inbound" ? "inbound" : m.status}
+                          </span>
+                        )}
                         <span className="tag">{m.from}</span>
                         {m.analysis.otp && (
                           <span className="otp-tag">
@@ -790,13 +827,22 @@ function App() {
                   >
                     Raw JSON
                   </button>
+                  <button
+                    role="tab"
+                    aria-selected={tab === "events"}
+                    onClick={() => setTab("events")}
+                  >
+                    Events
+                  </button>
                   <span className="status-pill">
                     <Check size={12} />
-                    Captured
+                    {current.status}
                   </span>
                 </div>
                 <div className="detail-content">
-                  {tab === "json" ? (
+                  {tab === "events" ? (
+                    <MessageEvents id={current.id} revision={live.revision} />
+                  ) : tab === "json" ? (
                     <div className="raw-view">
                       <button
                         className="secondary"
@@ -819,7 +865,10 @@ function App() {
                       </div>
                       <div className="sms-bubble">{current.body}</div>
                       <div className="bubble-caption">
-                        Captured locally · No SMS sent
+                        {current.mode === "simulate"
+                          ? `Simulated ${current.direction}`
+                          : "Captured locally"}{" "}
+                        · No SMS sent
                       </div>
                       {current.analysis.otp && (
                         <div className="otp-card">
@@ -962,6 +1011,51 @@ function App() {
               void send(e);
             }}
           >
+            <label>
+              Mode
+              <select
+                value={composeMode}
+                onChange={(e) => setComposeMode(e.target.value)}
+              >
+                <option value="capture">Capture only</option>
+                <option value="simulate">Simulate delivery</option>
+                <option value="inbound">Simulate incoming SMS</option>
+              </select>
+            </label>
+            {composeMode === "simulate" && (
+              <label>
+                Scenario
+                <select name="scenario_id" required defaultValue="">
+                  <option value="" disabled>
+                    Choose a scenario
+                  </option>
+                  {scenarios.map((scenario) => (
+                    <option key={scenario.id} value={scenario.id}>
+                      {scenario.name}
+                    </option>
+                  ))}
+                </select>
+                {!scenarios.length && (
+                  <span className="optional">
+                    Create a scenario from the sidebar first.
+                  </span>
+                )}
+              </label>
+            )}
+            {composeMode !== "capture" && (
+              <label>
+                Callback URL <span className="optional">optional</span>
+                <input
+                  name="callback_url"
+                  type="url"
+                  placeholder={
+                    composeMode === "inbound"
+                      ? "Your application’s inbound webhook URL"
+                      : "Override scenario callback URL"
+                  }
+                />
+              </label>
+            )}
             <div className="form-row">
               <label>
                 To
@@ -1055,6 +1149,14 @@ function App() {
       {modal === "connect" && (
         <ConnectDialog inbox={inbox} close={() => setModal(undefined)} />
       )}
+      {modal === "scenarios" && (
+        <ScenariosDialog
+          inbox={inbox}
+          scenarios={scenarios}
+          changed={() => setRefresh((n) => n + 1)}
+          close={() => setModal(undefined)}
+        />
+      )}
       {modal === "workspaces" && (
         <WorkspacesDialog
           data={workspaces}
@@ -1097,7 +1199,7 @@ function App() {
             </div>
             <div>
               <dt>Mode</dt>
-              <dd>Capture only</dd>
+              <dd>Local capture and simulation</dd>
             </div>
             <div>
               <dt>Authentication</dt>

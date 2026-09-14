@@ -20,6 +20,7 @@ import (
 	"github.com/fless-lab/TextDock/internal/cli"
 	"github.com/fless-lab/TextDock/internal/config"
 	"github.com/fless-lab/TextDock/internal/httpapi"
+	"github.com/fless-lab/TextDock/internal/simulation"
 	"github.com/fless-lab/TextDock/internal/storage"
 	"github.com/fless-lab/TextDock/internal/ui"
 )
@@ -110,7 +111,7 @@ func run() error {
 		return err
 	}
 	defer store.Close()
-	api := &httpapi.Server{Store: store, Devices: store, Workspaces: store, Token: token, Version: version, UI: ui.Files(), Listen: *addr, PublicURL: *publicURL, OTPPattern: otpRegex}
+	api := &httpapi.Server{Store: store, Devices: store, Workspaces: store, Simulation: store, WebhookSecret: os.Getenv("TEXTDOCK_WEBHOOK_SECRET"), Token: token, Version: version, UI: ui.Files(), Listen: *addr, PublicURL: *publicURL, OTPPattern: otpRegex}
 	server := &http.Server{
 		Addr: *addr, Handler: api.Handler(),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
@@ -122,6 +123,12 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+		(simulation.Worker{Store: store, Secret: api.WebhookSecret, Changed: api.Hub.Changed}).Run(ctx)
+	}()
+	defer func() { stop(); <-workerDone }()
 	if *retention > 0 {
 		go func() {
 			ticker := time.NewTicker(time.Minute)
@@ -144,7 +151,7 @@ func run() error {
 	}
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(listener) }()
-	slog.Info("TextDock ready", "url", "http://"+listener.Addr().String(), "version", version, "mode", "capture")
+	slog.Info("TextDock ready", "url", "http://"+listener.Addr().String(), "version", version, "mode", "local")
 	select {
 	case err := <-done:
 		if errors.Is(err, http.ErrServerClosed) {

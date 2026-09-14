@@ -33,6 +33,10 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	inbox := f.String("inbox", "local", "inbox ID")
 	to := f.String("to", "", "recipient")
 	from := f.String("from", "TextDock", "sender")
+	mode := f.String("mode", "capture", "capture or simulate")
+	direction := f.String("direction", "outbound", "outbound or inbound")
+	scenario := f.String("scenario", "", "simulation scenario ID")
+	callback := f.String("callback-url", "", "simulation webhook URL")
 	body := f.String("body", "", "message body")
 	run := f.String("run-id", "", "unique test run ID")
 	query := f.String("q", "", "literal search")
@@ -41,6 +45,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	tag := f.String("tag", "", "exact tag")
 	favorite := f.Bool("favorite", false, "only favorites")
 	otp := f.Bool("otp", false, "only detected codes")
+	status := f.String("status", "", "message status filter")
 	wait := f.Int("timeout", 30, "OTP wait in seconds (0–30)")
 	format := f.String("format", "jsonl", "export format: jsonl, json, csv")
 	dbPath := f.String("db", env("TEXTDOCK_DB", "data/textdock.db"), "database path (backup/restore only)")
@@ -116,9 +121,10 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	}
 	q := url.Values{"inbox": {*inbox}, "to": {*to}, "run_id": {*run}, "q": {*query}, "limit": {strconv.Itoa(*limit)}, "cursor": {*cursor}, "tag": {*tag}, "favorite": {strconv.FormatBool(*favorite)}, "otp": {strconv.FormatBool(*otp)}}
 	var data []byte
+	q.Set("status", *status)
 	switch command {
 	case "send":
-		data, err = call("POST", "/api/v1/messages", message.Input{Inbox: *inbox, To: *to, From: *from, Body: *body, RunID: *run})
+		data, err = call("POST", "/api/v1/messages", message.Input{Inbox: *inbox, To: *to, From: *from, Body: *body, RunID: *run, Mode: *mode, Direction: *direction, ScenarioID: *scenario, CallbackURL: *callback})
 	case "list":
 		data, err = call("GET", "/api/v1/messages?"+q.Encode(), nil)
 	case "wait":

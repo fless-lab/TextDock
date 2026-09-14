@@ -19,23 +19,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fless-lab/TextDock/internal/application"
 	"github.com/fless-lab/TextDock/internal/connect"
 	"github.com/fless-lab/TextDock/internal/events"
 	"github.com/fless-lab/TextDock/internal/message"
+	"github.com/fless-lab/TextDock/internal/simulation"
 	"github.com/fless-lab/TextDock/internal/workspace"
 )
 
 type Server struct {
-	Store      message.Repository
-	Token      string
-	Version    string
-	UI         fs.FS
-	Devices    connect.Repository
-	Workspaces workspace.Repository
-	Hub        events.Hub
-	Listen     string
-	PublicURL  string
-	OTPPattern *regexp.Regexp
+	Store         message.Repository
+	Token         string
+	Version       string
+	UI            fs.FS
+	Devices       connect.Repository
+	Workspaces    workspace.Repository
+	Hub           events.Hub
+	Listen        string
+	PublicURL     string
+	OTPPattern    *regexp.Regexp
+	Simulation    simulation.Repository
+	WebhookSecret string
 }
 
 func (s *Server) Handler() http.Handler {
@@ -117,6 +121,9 @@ func (s *Server) authorize(next http.Handler) http.Handler {
 }
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request) {
+	if s.simulationAPI(w, r) {
+		return
+	}
 	if s.workspaceAPI(w, r) {
 		return
 	}
@@ -148,7 +155,7 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 		s.Hub.Revoke(id)
 		w.WriteHeader(204)
 	case r.Method == "GET" && r.URL.Path == "/api/v1/info":
-		writeJSON(w, 200, map[string]any{"name": "TextDock", "version": s.Version, "mode": "capture", "auth_enabled": s.Token != ""})
+		writeJSON(w, 200, map[string]any{"name": "TextDock", "version": s.Version, "mode": "local", "auth_enabled": s.Token != "", "webhook_signing": s.WebhookSecret != ""})
 	case r.Method == "POST" && r.URL.Path == "/api/v1/messages":
 		var in message.Input
 		if err := decode(r, &in); err != nil {
@@ -210,7 +217,17 @@ func (s *Server) capture(w http.ResponseWriter, r *http.Request, in message.Inpu
 		fail(w, 400, "inbox does not exist")
 		return
 	}
-	m, err := message.New(in, source)
+	m, err := (application.Capture{Messages: s.Store, Simulation: s.Simulation, OTPPattern: s.OTPPattern, Changed: s.Hub.Changed}).Send(r.Context(), in, source)
+	var rejected application.Rejected
+	if errors.As(err, &rejected) {
+		w.Header().Set("Retry-After", strconv.Itoa(rejected.RetryAfter))
+		fail(w, rejected.Status, rejected.Error())
+		return
+	}
+	if errors.Is(err, application.ErrRequest) {
+		fail(w, 400, err.Error())
+		return
+	}
 	if errors.Is(err, message.ErrInvalid) {
 		fail(w, 400, "to must be E.164-shaped (+ and 7–15 digits); from is required (max 64 characters); body is required (max 4096 characters); run_id max 128 bytes")
 		return
@@ -219,17 +236,6 @@ func (s *Server) capture(w http.ResponseWriter, r *http.Request, in message.Inpu
 		internalError(w, err)
 		return
 	}
-	if s.OTPPattern != nil {
-		m.Analysis.OTP = ""
-		if match := s.OTPPattern.FindStringSubmatch(m.Body); len(match) > 1 && len(match[1]) <= 64 {
-			m.Analysis.OTP = match[1]
-		}
-	}
-	if err := s.Store.Save(r.Context(), m); err != nil {
-		internalError(w, err)
-		return
-	}
-	s.Hub.Changed(m.Inbox, m.To, m.RunID)
 	if twilio {
 		sid := fmt.Sprintf("SM%x", sha256.Sum256([]byte(m.ID)))[:34]
 		writeJSON(w, 201, map[string]any{
@@ -253,12 +259,16 @@ func (s *Server) twilio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for key := range r.PostForm {
-		if key != "To" && key != "From" && key != "Body" {
+		if key != "To" && key != "From" && key != "Body" && key != "StatusCallback" {
 			fail(w, 422, "unsupported Twilio parameter: "+key)
 			return
 		}
 	}
-	s.capture(w, r, message.Input{Inbox: r.Header.Get("X-TextDock-Inbox"), To: r.PostForm.Get("To"), From: r.PostForm.Get("From"), Body: r.PostForm.Get("Body")}, "twilio", true)
+	if r.PostForm.Has("StatusCallback") && r.Header.Get("X-TextDock-Scenario") == "" {
+		fail(w, 422, "StatusCallback requires X-TextDock-Scenario")
+		return
+	}
+	s.capture(w, r, message.Input{Inbox: r.Header.Get("X-TextDock-Inbox"), ScenarioID: r.Header.Get("X-TextDock-Scenario"), CallbackURL: r.PostForm.Get("StatusCallback"), To: r.PostForm.Get("To"), From: r.PostForm.Get("From"), Body: r.PostForm.Get("Body")}, "twilio", true)
 }
 
 func filter(r *http.Request) (message.Filter, error) {
@@ -269,6 +279,7 @@ func filter(r *http.Request) (message.Filter, error) {
 		f.Inbox = "local"
 	}
 	f.Tag = q.Get("tag")
+	f.Status = q.Get("status")
 	for key, target := range map[string]*bool{"favorite": &f.Favorite, "otp": &f.OTPOnly} {
 		if q.Has(key) {
 			v, err := strconv.ParseBool(q.Get(key))

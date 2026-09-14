@@ -20,6 +20,8 @@ internal/cli/            Scriptable API clients and backup/restore commands
 internal/config/         Strict JSON runtime configuration
 internal/connect/        Scoped device credentials and pairing repository contract
 internal/events/         Scoped/coalesced invalidation hub
+internal/application/    Provider-neutral capture/simulation orchestration
+internal/simulation/     Scenarios, callback formatting and durable worker
 internal/httpapi/        HTTP boundary, JSON API, Twilio create subset, token auth
 internal/ui/             Embedded production UI assets
 web/src/                 Desktop UI, PhoneApp, components and live-event hook
@@ -66,17 +68,17 @@ These are architecture decisions, **not empty packages pretending to work**.
 | `connect` | One-use pair codes, hashed device credentials, scopes, revocation | Implemented v0.2 |
 | `events` | Append-only lifecycle timeline, SSE notifications with resync | v0.2–v0.4 |
 | `workspace` | Local projects, inboxes, test runs, scoped access | Implemented v0.3 |
-| `simulation` | Seeded scenarios, virtual clock, failure/rate/latency rules | v0.4 |
-| `webhook` | Durable outbox, signing adapters, delivery attempts and replay | v0.4 |
+| `simulation` | Seeded scenarios, injected worker clock, rejection/latency rules | Implemented v0.4 |
+| Callback worker | Durable outbox, signing adapters, attempts and replay | Implemented v0.4 |
 | `providers` | Per-provider request/error/receipt normalization and capabilities | v0.5 |
 | `relay` | Explicit real-send routing, connector jobs and delivery receipts | v0.6 |
 | `devices` | Android gateway enrolment and emulator transport | v0.6–v0.7 |
 | `cloud` | Organizations, identities, tenant-aware services and quotas | v0.9 |
 
-Before lifecycle features, extract capture orchestration from the HTTP handler
-into an application service. The transaction must save the message, initial
-event and any outbox job together. Storage adapters provide transactions;
-providers must not send messages from inside a database transaction.
+v0.4 extracts capture orchestration into an application service. Transactions
+save messages, initial events and jobs together. A leased worker applies ordered
+transitions and schedules callbacks transactionally. HTTP callbacks execute
+outside transactions with at-least-once semantics and fencing on attempt commit.
 
 ### Three execution modes
 

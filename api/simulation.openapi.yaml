@@ -1,0 +1,157 @@
+openapi: 3.1.0
+info:
+  title: TextDock simulation API
+  version: 0.4.0
+  description: Local delivery scenarios, lifecycle events and durable application callbacks. No real SMS delivery.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security:
+  - {}
+  - bearerAuth: []
+paths:
+  /api/v1/scenarios:
+    get:
+      operationId: listScenarios
+      summary: List up to 200 scenarios in an inbox
+      parameters:
+        - { $ref: './openapi.yaml#/components/parameters/Inbox' }
+      responses:
+        '200':
+          description: Inbox scenarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scenarios: { type: array, items: { $ref: '#/components/schemas/Scenario' } }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createScenario
+      summary: Create a deterministic simulation scenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Scenario' }
+      responses:
+        '201':
+          description: Created scenario, with generated ID
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Scenario' }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/v1/scenarios/{id}:
+    delete:
+      operationId: deleteScenario
+      summary: Remove a scenario without changing already scheduled jobs
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/messages/{id}/events:
+    get:
+      operationId: listMessageEvents
+      summary: Read up to 200 lifecycle events in order
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Message lifecycle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        message_id: { type: string }
+                        status: { type: string }
+                        at: { type: string, format: date-time }
+                        detail: { type: string }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/v1/webhooks:
+    get:
+      operationId: listWebhookAttempts
+      summary: Read the latest 100 callback attempts for one message
+      parameters:
+        - { name: message_id, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Callback diagnostics and signing configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signing_enabled: { type: boolean }
+                  attempts: { type: array, items: { $ref: '#/components/schemas/Attempt' } }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/v1/webhooks/{id}/retry:
+    post:
+      operationId: replayWebhook
+      summary: Schedule a new retry budget for a finished callback job
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Replay scheduled }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/inbound:
+    post:
+      operationId: simulateInboundMessage
+      summary: Capture an incoming SMS and optionally call an application webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/MessageInput' }
+      responses:
+        '201':
+          description: Received message with mode simulate and direction inbound
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/Message' }
+        '400': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  responses:
+    Error: { $ref: './openapi.yaml#/components/responses/Error' }
+  schemas:
+    Scenario:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, readOnly: true }
+        inbox: { type: string, default: local }
+        name: { type: string, minLength: 1 }
+        prefix: { type: string, maxLength: 16 }
+        outcome: { type: string, enum: [delivered, failed, expired], default: delivered }
+        delay_ms: { type: integer, minimum: 0, maximum: 86400000, default: 0 }
+        failure_percent: { type: integer, minimum: 0, maximum: 100, default: 0 }
+        seed: { type: string }
+        reject_status: { type: integer, enum: [0, 400, 429, 503], default: 0 }
+        retry_after: { type: integer, minimum: 0, maximum: 3600 }
+        webhook_url: { type: string }
+        webhook_format: { type: string, enum: [json, twilio], default: json }
+    Attempt:
+      type: object
+      properties:
+        id: { type: integer }
+        job_id: { type: string }
+        message_id: { type: string }
+        at: { type: string, format: date-time }
+        url: { type: string }
+        request: { type: string }
+        headers: { type: object, additionalProperties: { type: string } }
+        content_type: { type: string }
+        response: { type: string }
+        response_truncated: { type: boolean }
+        status: { type: integer }
+        error: { type: string }
+        duration_ms: { type: integer }

@@ -1,6 +1,8 @@
 export interface Message {
   id: string;
   inbox: string;
+  mode: "capture" | "simulate";
+  direction: "outbound" | "inbound";
   favorite: boolean;
   tags: string[];
   to: string;
