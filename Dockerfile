@@ -6,7 +6,7 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.26.8-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.1-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=dev
