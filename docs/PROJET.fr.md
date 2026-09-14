@@ -6,6 +6,31 @@ Le principe : une utilisation légère, sans limiter l'ambition fonctionnelle.
 Un binaire ou un conteneur, une UI intégrée, une base locale et un port par défaut
 peu courant : **18257**. L'open source local reste autonome.
 
+Le site public et sa documentation sont disponibles sur
+**https://fless-lab.github.io/TextDock/**, avec les téléchargements de chaque
+release stable. GitHub Pages publie la documentation ; ce n'est pas encore le
+service SMS hébergé prévu dans la roadmap.
+
+## Où en est le projet ?
+
+Le socle local est utilisable : captures, téléphone en lecture seule, scénarios,
+webhooks, CLI et SDK. Tout le projet n'est pas fini. La prochaine étape est le
+relais SMS intégré et la validation de l'autocomplétion sur téléphone physique,
+puis le labo d'appareils, les fonctions d'équipe et le SaaS.
+
+## Les numéros de téléphone
+
+TextDock ne génère ni n'attribue actuellement de numéros réels. Tu choisis un
+destinataire pour adresser tes messages de test, retrouver un utilisateur,
+restreindre une boîte mobile ou appliquer un scénario. En local, ce numéro n'a
+pas besoin d'une SIM. Un futur générateur de fixtures ne créerait que des données
+fictives, jamais un numéro joignable sur le réseau mobile.
+
+Pour recevoir un vrai SMS dans l'application Messages, il faut le numéro réel du
+téléphone et un fournisseur ou une passerelle avec SIM. Les codes OTP, eux, sont
+générés et vérifiés par ton application ; TextDock les capture et les extrait.
+Voir [les numéros et OTP de test](TEST-NUMBERS.md).
+
 **Avancement v0.2 :** l'appairage QR, les sessions mobiles limitées à un
 destinataire/test, les événements en direct et la révocation sont implémentés.
 La v0.1 est publiée sur GitHub avec binaires et image Docker via la CI.

@@ -1,14 +1,32 @@
 {
   "name": "@textdock/sdk",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Server-side SMS sending with local TextDock, Twilio, Vonage and OVH drivers",
   "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
-  "exports": { ".": { "types": "./index.d.ts", "import": "./index.js" } },
-  "files": ["index.js", "index.d.ts", "README.md", "LICENSE"],
-  "engines": { "node": ">=20.3.0" },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.3.0"
+  },
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/fless-lab/TextDock.git", "directory": "packages/sdk" },
-  "scripts": { "test": "node --test test/*.test.js" }
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fless-lab/TextDock.git",
+    "directory": "packages/sdk"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
 }

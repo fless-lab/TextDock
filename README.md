@@ -2,14 +2,14 @@
 
 **Your local SMS development inbox.**
 
-[Source](https://github.com/fless-lab/TextDock) · [Releases](https://github.com/fless-lab/TextDock/releases) · [Issues](https://github.com/fless-lab/TextDock/issues)
+[Website & docs](https://fless-lab.github.io/TextDock/) · [Source](https://github.com/fless-lab/TextDock) · [Releases](https://github.com/fless-lab/TextDock/releases) · [Issues](https://github.com/fless-lab/TextDock/issues)
 
 Capture messages, inspect SMS encoding, grab verification codes, and test your
 application without a real SMS provider. One binary, one port, one local database.
 
-TextDock starts as a Mailpit-style developer tool. The long-term direction adds
-phone pairing, native SMS relays, and an optional hosted team service. The local
-capture experience remains standalone and open source.
+TextDock is a Mailpit-style developer tool with phone pairing and delivery
+simulation. Native SMS relays and an optional hosted team service are future
+milestones. The local capture experience remains standalone and open source.
 
 ## Start here
 
@@ -70,7 +70,7 @@ The OTP endpoint returns `{"code":"482193","message_id":"msg_…"}`. The
 application remains responsible for generating, expiring and verifying codes.
 Extraction is a heuristic for 4–8 digit candidates, not an authentication service.
 
-## Available in v0.5.0
+## Available in v0.5.1
 
 - Persistent SQLite inbox and responsive desktop/phone UI, light and dark themes.
 - JSON capture API, search, recipient/run/time filters, per-message JSON export
@@ -133,9 +133,11 @@ for HTTP; remote access needs HTTPS. Details: [mobile and autofill](docs/MOBILE-
 - [Provider compatibility and production switching](docs/PROVIDERS.md) · [Node SDK](packages/sdk/README.md)
 - [Versioned roadmap and acceptance criteria](docs/ROADMAP.md)
 - [Mobile, native SMS, WebOTP and Android/iOS](docs/MOBILE-AND-OTP.md)
+- [Phone numbers and OTPs in tests](docs/TEST-NUMBERS.md)
 - [Phone pairing and live connections](docs/CONNECT.md)
 - [API and compatibility](docs/API.md) · [OpenAPI](api/openapi.yaml)
 - [Release process](docs/RELEASING.md)
+- [Website and Pages publishing](docs/WEBSITE.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 - [French project overview](docs/PROJET.fr.md)
 

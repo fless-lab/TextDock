@@ -33,6 +33,19 @@ server on **18258**, separate from the default development instance.
 The executable smoke test checks the default port **18257**; stop your own
 TextDock instance before running it.
 
+## Website and documentation
+
+Edit guides in `docs/` and site-specific pages in `site/pages/`. The website build
+generates its content from those sources; do not edit `site/content/` directly.
+
+```sh
+npm --prefix site ci
+npm --prefix site run build
+npm --prefix site test
+```
+
+See [website publishing](docs/WEBSITE.md) for the Pages workflow and local preview.
+
 `make test` also runs the dependency-free Node SDK tests; `make check` checks its
 public TypeScript contract. No provider credentials are used by these tests.
 

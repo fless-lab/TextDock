@@ -7,7 +7,7 @@ are included. One send interface, with explicit `local`, `twilio`, `vonage`, or
 Install from the TextDock GitHub Release asset:
 
 ```sh
-npm install https://github.com/fless-lab/TextDock/releases/download/v0.5.0/textdock-sdk-0.5.0.tgz
+npm install https://github.com/fless-lab/TextDock/releases/download/v0.5.1/textdock-sdk-0.5.1.tgz
 ```
 
 Or install `./packages/sdk` from a source checkout. This package is distributed

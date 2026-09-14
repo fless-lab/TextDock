@@ -142,3 +142,34 @@ jobs:
           flags=()
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags+=(--prerelease); fi
           gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "TextDock $GITHUB_REF_NAME" "${flags[@]}"
+
+  pages:
+    needs: [checks, publish]
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Keep the public site on the latest stable release
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          if [ "$latest" = "$GITHUB_REF_NAME" ]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Deploy the tested documentation site
+        if: steps.latest.outputs.deploy == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4

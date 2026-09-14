@@ -1,0 +1,21 @@
+{
+  "name": "textdock-site",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:docs": "node scripts/prepare.mjs",
+    "dev": "npm run prepare:docs && vitepress dev --host 127.0.0.1",
+    "build": "npm run prepare:docs && vitepress build && node scripts/check-links.mjs",
+    "preview": "vitepress preview --host 127.0.0.1 --port 18260",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "vitepress": "2.0.0-alpha.20"
+  },
+  "dependencies": {
+    "vue": "3.5.42"
+  }
+}

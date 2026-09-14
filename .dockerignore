@@ -8,4 +8,5 @@ web/test-results
 web/playwright-report
 internal/ui/dist
 .env
+site
 *.db*

@@ -5,6 +5,21 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-14
+
+### Added
+
+- Public GitHub Pages website with a restrained responsive landing page, downloads and full documentation.
+- Local documentation search, dark/light themes, API-contract downloads, canonical URLs and sitemap.
+- Single-source guide generation from repository Markdown, with checked links and anchors.
+- Website build, browser and accessibility checks in CI; automatic Pages deployment after stable releases.
+- Clear current-status/next-steps overview and explanation of test phone numbers versus real SMS numbers.
+
+### Distribution
+
+- The website tracks the latest stable release; prereleases do not replace it.
+- Application and SDK behavior remain the v0.5 feature set.
+
 ## [0.5.0] - 2026-09-14
 
 ### Added

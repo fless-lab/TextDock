@@ -54,7 +54,7 @@ Acceptance: a saved scenario reproduces the same event sequence; crash/restart
 does not lose scheduled events or webhook attempts. Timeouts and out-of-order
 receipts are testable. Simulation never emits real SMS.
 
-## v0.5.0 — Provider fidelity and production switching (implemented subsets)
+## v0.5.0 — Provider fidelity and production switching (released subsets)
 
 - Expand Twilio compatibility based on versioned contract fixtures.
 - Add OVH and Vonage capture adapters with published support matrices.
@@ -69,6 +69,12 @@ live credentialed provider/device verification remain follow-up compatibility wo
 Acceptance: the same sample application changes configuration between local and
 one real provider; opt-in credentialed smoke tests record what local emulation
 cannot guarantee. No production credentials are needed for normal CI.
+
+## v0.5.1 — Website and release documentation
+
+Public GitHub Pages website, versioned downloads, generated documentation,
+local search, accessible phone/desktop layouts and automatic stable-release
+deployment. This is the documentation site, not the future hosted SMS service.
 
 ## v0.6.0 — Native SMS relay
 
@@ -127,8 +133,9 @@ and enforce quotas under load. Hosted infrastructure does not gate local use.
 1. Acceptance journey works, and UI labels match implemented behavior.
 2. Relevant unit, integration, SDK and browser checks pass.
 3. Changes include documentation, migration notes and CHANGELOG entry.
-4. `VERSION`, frontend package and lockfile versions agree.
+4. `VERSION`, frontend/SDK/site package and lockfile versions agree.
 5. Review status/diff, commit intended files, annotate `vX.Y.Z`.
 6. Push the reviewed commit/tag when the remote is configured; tag CI reruns
-   verification before publishing binaries and the multiarchitecture image.
+   verification before publishing binaries, the SDK, the multiarchitecture image
+   and the stable-release documentation website.
 7. Install one produced artifact and record smoke-test results.

@@ -9,9 +9,14 @@ const lock = JSON.parse(readFileSync(new URL('../web/package-lock.json', import.
 const changes = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
 const openapi = readFileSync(new URL('../api/openapi.yaml', import.meta.url), 'utf8');
 const sdk = JSON.parse(readFileSync(new URL('../packages/sdk/package.json', import.meta.url), 'utf8'));
+const site = JSON.parse(readFileSync(new URL('../site/package.json', import.meta.url), 'utf8'));
+const siteLock = JSON.parse(readFileSync(new URL('../site/package-lock.json', import.meta.url), 'utf8'));
 assert.equal(tag, `v${version}`, 'Tag and VERSION must agree');
 assert.equal(pkg.version, version, 'UI and VERSION must agree');
 assert.equal(sdk.version, version, 'SDK and VERSION must agree');
+assert.equal(site.version, version, 'Website and VERSION must agree');
+assert.equal(siteLock.version, version, 'Website lockfile and VERSION must agree');
+assert.equal(siteLock.packages[''].version, version, 'Website root lock entry must agree');
 assert.equal(lock.version, version, 'Lockfile and VERSION must agree');
 assert.equal(lock.packages[''].version, version, 'Root lock entry must agree');
 assert.ok(changes.includes(`## [${version}]`), 'Release needs a CHANGELOG entry');

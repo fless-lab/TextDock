@@ -11,3 +11,9 @@ internal/ui/dist/*
 !internal/ui/dist/.gitkeep
 web/test-results/
 web/playwright-report/
+site/node_modules/
+site/content/
+site/.vitepress/cache/
+site/.vitepress/dist/
+site/test-results/
+site/playwright-report/
