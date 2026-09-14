@@ -1,0 +1,17 @@
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+
+const tag = process.argv[2];
+assert.match(tag || '', /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/, 'Expected a vX.Y.Z release tag');
+const version = readFileSync(new URL('../VERSION', import.meta.url), 'utf8').trim();
+const pkg = JSON.parse(readFileSync(new URL('../web/package.json', import.meta.url), 'utf8'));
+const lock = JSON.parse(readFileSync(new URL('../web/package-lock.json', import.meta.url), 'utf8'));
+const changes = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
+const openapi = readFileSync(new URL('../api/openapi.yaml', import.meta.url), 'utf8');
+assert.equal(tag, `v${version}`, 'Tag and VERSION must agree');
+assert.equal(pkg.version, version, 'UI and VERSION must agree');
+assert.equal(lock.version, version, 'Lockfile and VERSION must agree');
+assert.equal(lock.packages[''].version, version, 'Root lock entry must agree');
+assert.ok(changes.includes(`## [${version}]`), 'Release needs a CHANGELOG entry');
+assert.equal(openapi.match(/^  version: (.+)$/m)?.[1], version, 'OpenAPI and VERSION must agree');
+console.log(`Release metadata verified: ${tag}`);

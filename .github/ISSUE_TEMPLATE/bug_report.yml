@@ -1,0 +1,15 @@
+name: Bug report
+description: Report a reproducible problem
+body:
+  - type: input
+    id: version
+    attributes: { label: TextDock version, placeholder: 'textdock --version' }
+    validations: { required: true }
+  - type: textarea
+    id: environment
+    attributes: { label: Environment, description: 'OS, architecture, browser, binary or Docker, local or LAN.' }
+    validations: { required: true }
+  - type: textarea
+    id: reproduction
+    attributes: { label: Steps and expected behavior, description: 'Include a minimal request. Replace personal numbers, tokens and real OTPs with test values.' }
+    validations: { required: true }

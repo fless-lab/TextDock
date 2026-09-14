@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TextDock · WebOTP integration example</title>
+  <h1>Verify your code</h1>
+  <p>This example listens for a real, domain-bound SMS. It does not send one.</p>
+  <form id="verify">
+    <label for="code">Verification code</label>
+    <input id="code" name="code" autocomplete="one-time-code" inputmode="numeric" required />
+    <button type="submit">Continue</button>
+  </form>
+  <button id="listen" type="button">Listen for an SMS</button>
+  <p id="status" role="status">Manual entry is always available.</p>
+  <p>Send this text through a real relay after starting the listener:</p>
+  <pre id="format"></pre>
+  <script type="module" src="./webotp.js"></script>
+</html>

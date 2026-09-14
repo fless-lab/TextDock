@@ -1,0 +1,11 @@
+.git
+.github
+bin
+dist
+data
+web/node_modules
+web/test-results
+web/playwright-report
+internal/ui/dist
+.env
+*.db*

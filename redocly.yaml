@@ -1,0 +1,4 @@
+extends: [recommended]
+rules:
+  # The canonical endpoint of a local-first tool is intentionally localhost.
+  no-server-example.com: off

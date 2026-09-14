@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: TextDock capture API
+  version: 0.1.0
+  description: Local SMS capture. Bearer authentication is required only when TEXTDOCK_TOKEN is configured. No real SMS is sent.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://localhost:18257
+security:
+  - {}
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      summary: Process liveness
+      security: []
+      responses:
+        '200':
+          description: Process is listening
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, const: ok }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/v1/info:
+    get:
+      operationId: getInfo
+      summary: Server information
+      responses:
+        '200':
+          description: Current configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, version, mode, auth_enabled]
+                properties:
+                  name: { type: string, const: TextDock }
+                  version: { type: string }
+                  mode: { type: string, const: capture }
+                  auth_enabled: { type: boolean }
+        '401': { $ref: '#/components/responses/Error' }
+        default: { $ref: '#/components/responses/Error' }
+  /api/v1/messages:
+    post:
+      operationId: captureMessage
+      summary: Capture an outbound SMS locally
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MessageInput' }
+      responses:
+        '201':
+          description: Message captured
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        default: { $ref: '#/components/responses/Error' }
+    get:
+      operationId: listMessages
+      summary: List newest matching messages
+      parameters:
+        - { $ref: '#/components/parameters/Query' }
+        - { $ref: '#/components/parameters/To' }
+        - { $ref: '#/components/parameters/RunID' }
+        - { $ref: '#/components/parameters/Since' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Bounded result set
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messages, limit]
+                properties:
+                  messages:
+                    type: array
+                    items: { $ref: '#/components/schemas/Message' }
+                  limit: { type: integer, minimum: 1, maximum: 200 }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        default: { $ref: '#/components/responses/Error' }
+  /api/v1/messages/{id}:
+    delete:
+      operationId: deleteMessage
+      summary: Permanently delete one captured message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        default: { $ref: '#/components/responses/Error' }
+  /api/v1/otp:
+    get:
+      operationId: waitForOTP
+      summary: Wait for a detected OTP in one recipient and test run
+      parameters:
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: run_id
+          in: query
+          required: true
+          description: Use a unique value for every test execution to avoid stale codes.
+          schema: { type: string, minLength: 1 }
+        - name: timeout
+          in: query
+          description: Maximum wait in whole seconds. Zero checks once.
+          schema: { type: integer, minimum: 0, maximum: 30, default: 0 }
+        - { $ref: '#/components/parameters/Since' }
+        - { $ref: '#/components/parameters/Query' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Candidate found
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message_id]
+                properties:
+                  code: { type: string, pattern: '^[0-9]{4,8}$' }
+                  message_id: { type: string }
+        '404': { $ref: '#/components/responses/Error' }
+        default: { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    Query:
+      name: q
+      in: query
+      schema: { type: string }
+      description: Literal body or recipient substring, SQLite default case folding.
+    To:
+      name: to
+      in: query
+      schema: { type: string }
+      description: Exact recipient; encode the plus sign.
+    RunID:
+      name: run_id
+      in: query
+      schema: { type: string }
+    Since:
+      name: since
+      in: query
+      schema: { type: string, format: date-time }
+      description: Inclusive creation timestamp.
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+  responses:
+    Error:
+      description: Request failed; see the HTTP status and error description.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error: { type: string }
+  schemas:
+    MessageInput:
+      type: object
+      additionalProperties: false
+      required: [to, from, body]
+      properties:
+        to: { type: string, pattern: '^\+[1-9][0-9]{6,14}$' }
+        from: { type: string, minLength: 1, maxLength: 64 }
+        body: { type: string, minLength: 1, maxLength: 4096 }
+        run_id:
+          type: string
+          description: Optional test identifier, limited to 128 UTF-8 bytes by the server.
+    Message:
+      type: object
+      required: [id, to, from, body, run_id, source, status, created_at, analysis]
+      properties:
+        id: { type: string }
+        to: { type: string }
+        from: { type: string }
+        body: { type: string }
+        run_id: { type: string }
+        source: { type: string, enum: [api, twilio] }
+        status: { type: string, const: captured }
+        created_at: { type: string, format: date-time }
+        analysis:
+          type: object
+          required: [encoding, units, segments, characters]
+          properties:
+            encoding: { type: string, enum: [GSM-7, UTF-16] }
+            units: { type: integer, minimum: 0 }
+            segments: { type: integer, minimum: 0 }
+            characters: { type: integer, minimum: 0 }
+            otp: { type: string, pattern: '^[0-9]{4,8}$' }

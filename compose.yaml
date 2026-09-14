@@ -1,0 +1,15 @@
+services:
+  textdock:
+    build: .
+    ports:
+      - "127.0.0.1:${TEXTDOCK_PORT:-18257}:18257"
+    environment:
+      # Local development credential only. Override for LAN use.
+      TEXTDOCK_TOKEN: "${TEXTDOCK_TOKEN:-textdock-local-development}"
+    volumes:
+      - textdock-data:/data
+    init: true
+    restart: unless-stopped
+
+volumes:
+  textdock-data:
