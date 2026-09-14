@@ -147,6 +147,8 @@ jobs:
     needs: [checks, publish]
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-latest
+    outputs:
+      deployed: ${{ steps.latest.outputs.deploy }}
     permissions:
       contents: read
       pages: write
@@ -173,3 +175,10 @@ jobs:
         if: steps.latest.outputs.deploy == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
+
+  verify-pages:
+    needs: pages
+    if: needs.pages.outputs.deployed == 'true'
+    uses: ./.github/workflows/verify-pages.yml
+    with:
+      tag: ${{ github.ref_name }}

@@ -65,3 +65,9 @@ the website sources (v0.5.1 or later).
 After a release, verify the public homepage, a deep documentation link and the
 versioned download links. The domain can be changed later, but `base`, canonical
 URLs, sitemap and tests must be updated together.
+
+The **Verify public documentation** workflow checks the live homepage, deep
+links, release download URLs and OpenAPI version from a GitHub runner. It can be
+run independently, and is invoked after deployments. Short retries account for
+Pages/CDN propagation. This also permits verification when a developer's local
+network filters `github.io`.

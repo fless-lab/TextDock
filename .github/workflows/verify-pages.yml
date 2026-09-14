@@ -1,0 +1,67 @@
+name: Verify public documentation
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        description: Stable release tag expected on the public site
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  public-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve the expected release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="$INPUT_TAG"
+          if [ -z "$tag" ]; then
+            tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Check public pages and release links
+        env:
+          SITE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { setTimeout as delay } from 'node:timers/promises';
+          const tag = process.env.SITE_TAG;
+          assert.match(tag, /^v\d+\.\d+\.\d+$/);
+          const base = 'https://fless-lab.github.io/TextDock/';
+          const version = tag.slice(1);
+          const checks = [
+            ['', ['Your local', tag]],
+            ['guide/test-numbers.html', ['Phone numbers and OTPs in tests', 'TextDock currently captures']],
+            ['project/status.html', ['Current status and next steps', version]],
+            ['downloads.html', [`releases/download/${tag}/textdock_${tag}_linux_amd64.tar.gz`, `textdock-sdk-${version}.tgz`]],
+            ['api/openapi.yaml', ['openapi: 3.1.0', `version: ${version}`]],
+          ];
+          for (const [route, expected] of checks) {
+            let error;
+            for (let attempt = 0; attempt < 8; attempt++) {
+              try {
+                const response = await fetch(base + route, { signal: AbortSignal.timeout(20000), headers: { 'Cache-Control': 'no-cache' } });
+                assert.equal(response.status, 200);
+                const body = await response.text();
+                for (const text of expected) assert.ok(body.includes(text), `Missing expected content: ${text}`);
+                error = undefined;
+                break;
+              } catch (failure) {
+                error = failure;
+                if (attempt < 7) await delay(10000);
+              }
+            }
+            if (error) throw new Error(`Public verification failed for ${base + route}`, { cause: error });
+            console.log(`Verified ${base + route}`);
+          }
+          NODE
