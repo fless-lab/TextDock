@@ -20,6 +20,7 @@ const routes = new Map(Object.entries({
   'docs/NOTIFICATIONS.md': 'guide/notifications.md',
   'docs/NATIVE-SAMPLES.md': 'guide/native-samples.md',
   'docs/API-KEYS.md': 'guide/api-keys.md',
+  'docs/USERS.md': 'guide/users.md',
   'android/README.md': 'reference/android-gateway.md',
   'docs/MOBILE-AND-OTP.md': 'guide/mobile-and-otp.md',
   'docs/API.md': 'reference/api.md',

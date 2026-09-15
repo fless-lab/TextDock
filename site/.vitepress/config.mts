@@ -47,6 +47,7 @@ export default defineConfig({
       { text: 'Use TextDock', items: [
         { text: 'Projects, CLI & backups', link: '/guide/workflow' },
         { text: 'Scoped API keys', link: '/guide/api-keys' },
+        { text: 'Users & project roles', link: '/guide/users' },
         { text: 'Connect a phone', link: '/guide/connect' },
         { text: 'Install & receive notifications', link: '/guide/notifications' },
         { text: 'Native OTP sample apps', link: '/guide/native-samples' },

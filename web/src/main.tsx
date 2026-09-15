@@ -1219,6 +1219,7 @@ function App() {
                           Tags
                           <input
                             name="tags"
+                            readOnly={!canWrite}
                             defaultValue={current.tags.join(", ")}
                             placeholder="Comma-separated tags"
                           />

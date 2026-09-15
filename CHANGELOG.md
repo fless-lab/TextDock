@@ -5,11 +5,25 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.8.0-beta.2] - 2026-09-15
+
+### Added
+
 - Operator-created user accounts, Argon2id password hashes and expiring/revocable
   browser sessions with bounded login work and attempt budgets.
 - Project viewer/member/admin roles, member management and role-aware desktop UI.
 - Password change/reset, account disable/enable and session management.
 - Cross-user/project authorization and delayed-response isolation checks.
+
+### Scope
+
+- SQLite schema 10 adds users, project memberships and hashed sessions.
+- Project admins manage only their projects; global account/key administration,
+  real relay, phone/gateway management and simulation remain operator-only.
+- User login requires a configured server token. Anonymous local startup remains
+  available for single-user use.
+- Audit history, invitations, OIDC/MFA, PostgreSQL and hosted organizations remain
+  follow-up work. Pages stays on stable v0.5.2 for this prerelease.
 
 ## [0.8.0-beta.1] - 2026-09-15
 

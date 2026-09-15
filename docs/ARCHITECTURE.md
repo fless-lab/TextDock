@@ -152,6 +152,14 @@ and OTP polling rechecks current credential state. Operator APIs remain unrestri
 only for the server token or the existing anonymous loopback mode. See
 [scoped API keys](API-KEYS.md) for supported routes and remaining team milestones.
 
+User sessions add a per-request identity and current memberships. The resource's
+project role is translated into the same scoped message policy; project grants
+are never unioned into a global permission set. Separate account/team handlers
+enforce self-session ownership and project-admin versus operator administration.
+Membership/password/account changes revoke user sessions in the same transaction,
+then close their live subscriptions. The browser rejects stale results across
+identity/inbox changes. See [users and roles](USERS.md).
+
 Build a hosted control plane around the same capture engine rather than
 retrofitting tenant isolation into unscoped SQL queries after launch.
 

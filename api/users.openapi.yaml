@@ -1,0 +1,328 @@
+openapi: 3.1.0
+info:
+  title: TextDock users and project roles
+  version: 0.8.0-beta.2
+  description: Local operator-created accounts and 12-hour user sessions. Project roles do not grant operator access. Account administration requires a configured server token.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security:
+  - userSession: []
+paths:
+  /api/v1/auth/login:
+    post:
+      operationId: loginUser
+      summary: Sign in using a local account password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [username, password]
+              properties:
+                username: { type: string, minLength: 3, maxLength: 64 }
+                password: { $ref: '#/components/schemas/Password' }
+      responses:
+        '200':
+          description: New session and secret
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string, pattern: '^td_user_' }
+                  session: { $ref: '#/components/schemas/Session' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/v1/account:
+    get:
+      operationId: getUserAccount
+      summary: Read the authenticated user session and project roles
+      responses:
+        '200':
+          description: Current session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/v1/account/events:
+    get:
+      operationId: streamUserSession
+      summary: Receive generic lifecycle invalidations even without project access
+      responses:
+        '200':
+          description: SSE sync/heartbeat/revoked events with empty JSON data
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/v1/account/logout:
+    post:
+      operationId: logoutUser
+      summary: Revoke this session and close its streams
+      responses:
+        '204': { description: Signed out }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/v1/account/password:
+    put:
+      operationId: changeOwnPassword
+      summary: Change your password and revoke all your sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [current_password, password]
+              properties:
+                current_password: { $ref: '#/components/schemas/Password' }
+                password: { $ref: '#/components/schemas/Password' }
+      responses:
+        '204': { description: Password changed; sign in again }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/v1/account/sessions:
+    get:
+      operationId: listOwnSessions
+      summary: List only your active sessions
+      responses:
+        '200':
+          description: Sessions without tokens or password hashes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current_id: { type: string }
+                  sessions:
+                    type: array
+                    items: { $ref: '#/components/schemas/SessionSummary' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/v1/account/sessions/{id}:
+    delete:
+      operationId: revokeOwnSession
+      summary: Revoke a session owned by the current user
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: Session revoked }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/v1/team/users:
+    get:
+      operationId: listUsers
+      summary: Operator-only account directory
+      security: [{ operatorToken: [] }]
+      responses:
+        '200':
+          description: Account metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createUser
+      summary: Create an account with no initial project membership
+      security: [{ operatorToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [username, name, password]
+              properties:
+                username: { type: string, minLength: 3, maxLength: 64 }
+                name: { type: string, minLength: 1, maxLength: 80 }
+                password: { $ref: '#/components/schemas/Password' }
+      responses:
+        '201':
+          description: Created account
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/v1/team/users/{id}:
+    patch:
+      operationId: disableUser
+      summary: Enable or disable an account and revoke its sessions
+      security: [{ operatorToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [disabled]
+              properties:
+                disabled: { type: boolean }
+      responses:
+        '204': { description: Account updated }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/v1/team/users/{id}/password:
+    put:
+      operationId: resetUserPassword
+      summary: Operator password reset with session revocation
+      security: [{ operatorToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [password]
+              properties:
+                password: { $ref: '#/components/schemas/Password' }
+      responses:
+        '204': { description: Password reset }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/v1/team/memberships:
+    get:
+      operationId: listProjectMembers
+      summary: List members of a project accessible to the caller
+      security: [{ operatorToken: [] }, { userSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Project' }]
+      responses:
+        '200':
+          description: Project member metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items: { $ref: '#/components/schemas/Membership' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: assignProjectRole
+      summary: Operator/project-admin assignment; revokes the member's sessions
+      security: [{ operatorToken: [] }, { userSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [project_id, username, role]
+              properties:
+                project_id: { type: string }
+                username: { type: string }
+                role: { $ref: '#/components/schemas/Role' }
+      responses:
+        '204': { description: Role saved }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: removeProjectMember
+      summary: Operator/project-admin removal; revokes the member's sessions
+      security: [{ operatorToken: [] }, { userSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Project'
+        - in: query
+          name: user_id
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Membership removed }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    operatorToken: { type: http, scheme: bearer }
+    userSession: { type: http, scheme: bearer, description: 'td_user_ session token; project role checked on each operation' }
+  parameters:
+    ID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+    Project:
+      in: query
+      name: project_id
+      required: true
+      schema: { type: string }
+  responses:
+    Error: { $ref: './openapi.yaml#/components/responses/Error' }
+  schemas:
+    Password: { type: string, format: password, minLength: 12, maxLength: 128, writeOnly: true }
+    Role: { type: string, enum: [viewer, member, admin] }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        name: { type: string }
+        disabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+    Membership:
+      type: object
+      properties:
+        project_id: { type: string }
+        user_id: { type: string }
+        username: { type: string }
+        name: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+    SessionSummary:
+      type: object
+      properties:
+        id: { type: string }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+    Session:
+      allOf:
+        - $ref: '#/components/schemas/SessionSummary'
+        - type: object
+          properties:
+            user: { $ref: '#/components/schemas/User' }
+            memberships:
+              type: array
+              items: { $ref: '#/components/schemas/Membership' }

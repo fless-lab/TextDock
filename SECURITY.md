@@ -20,6 +20,21 @@ snapshot also restores its key/revocation state. See [API keys](docs/API-KEYS.md
 Anonymous loopback mode remains operator access: set the server token to enforce
 isolation on a shared instance. Scoped keys are not a hosted tenant boundary.
 
+User passwords use Argon2id (64 MiB, two iterations, one lane), random 16-byte
+salts and 32-byte results. User sessions have random 256-bit secrets, stored as
+SHA-256 hashes, and a 12-hour absolute lifetime. Login/password work is bounded
+and sign-in attempts are rate-limited in memory. The browser stores its session
+Bearer token in tab-scoped sessionStorage, accessible to same-origin JavaScript;
+there are no ambient authentication cookies.
+
+Project roles are resolved for each requested resource; permissions in another
+project cannot elevate that resource's role. Project administrators cannot create
+global accounts or reset other passwords. Password changes/resets, disable/enable
+and membership saves revoke all affected user sessions transactionally and close
+their active streams. Requests already admitted may finish. Old browser responses
+are ignored after identity/inbox switches. Backups can restore earlier password,
+membership and session state. See [user sessions](docs/USERS.md).
+
 The v0.6 preview adds separately scoped gateway credentials and an opt-in real
 SMS relay. Gateway tokens are stored as hashes, cannot authorize the desktop API,
 and can acknowledge only their own leased jobs. Provider credentials remain in

@@ -121,9 +121,10 @@ SMS Retriever behavior on every emulator image or silent iOS inbox insertion.
 
 The first preview implements project/inbox API keys, independent read/write/delete
 permissions, expiry/revocation, operator management UI and scoped CI capture,
-exports, OTP polling and SSE. User sessions/roles, audit events, PostgreSQL and
-deployment quotas remain follow-up work. Device/relay/simulation administration
-remains operator-only for these machine credentials.
+exports, OTP polling and SSE. The second preview adds operator-created accounts,
+Argon2id passwords, revocable sessions and project viewer/member/admin roles.
+Audit events, PostgreSQL and deployment quotas remain follow-up work.
+Device/relay/simulation administration remains operator-only for these credentials.
 
 Acceptance: isolation tests cover every API, export, subscription and worker;
 local single-user startup remains one command with SQLite.

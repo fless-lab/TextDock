@@ -4,8 +4,8 @@ API keys let a CI job or integration work with one **project** or **inbox** with
 receiving the TextDock operator token. Create and revoke them from **Manage
 projects → Manage API keys**, or **Settings → Manage API keys**.
 
-This is the first self-hosted-team preview. User accounts, roles, audit trails and
-PostgreSQL remain separate milestones.
+Machine keys are separate from [user accounts and project roles](USERS.md).
+Audit trails and PostgreSQL remain follow-up milestones.
 
 ## Operator access and local mode
 
