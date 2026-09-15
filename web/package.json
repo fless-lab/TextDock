@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
+    "dev": "node scripts/icons.mjs && vite --host 127.0.0.1",
+    "build": "node scripts/icons.mjs && tsc --noEmit && vite build",
     "check": "tsc --noEmit && prettier --check src",
     "format": "prettier --write src",
     "test:e2e": "playwright test"

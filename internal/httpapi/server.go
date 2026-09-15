@@ -24,6 +24,7 @@ import (
 	"github.com/fless-lab/TextDock/internal/devicelab"
 	"github.com/fless-lab/TextDock/internal/events"
 	"github.com/fless-lab/TextDock/internal/message"
+	"github.com/fless-lab/TextDock/internal/push"
 	"github.com/fless-lab/TextDock/internal/relay"
 	"github.com/fless-lab/TextDock/internal/simulation"
 	"github.com/fless-lab/TextDock/internal/workspace"
@@ -44,6 +45,7 @@ type Server struct {
 	WebhookSecret string
 	Relay         *relay.Service
 	Lab           *devicelab.Service
+	Push          *push.Service
 }
 
 func (s *Server) Handler() http.Handler {

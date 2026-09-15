@@ -5,6 +5,9 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+- Opt-in encrypted Web Push for paired phone inboxes, installable phone UI,
+  privacy-preserving notifications and scoped subscription lifecycle handling.
+
 ## [0.7.0-beta.1] - 2026-09-14
 
 ### Added

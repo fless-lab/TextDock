@@ -114,12 +114,26 @@ func (s *SQLite) ListDevices(ctx context.Context) ([]connect.Device, error) {
 }
 
 func (s *SQLite) RevokeDevice(ctx context.Context, id string) (bool, error) {
-	r, err := s.db.ExecContext(ctx, `UPDATE devices SET revoked = 1 WHERE id = ?`, id)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	r, err := tx.ExecContext(ctx, `UPDATE devices SET revoked = 1 WHERE id = ?`, id)
 	if err != nil {
 		return false, err
 	}
 	n, err := r.RowsAffected()
-	return n > 0, err
+	if err != nil {
+		return false, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM push_jobs WHERE device_id=?`, id); err != nil {
+		return false, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM push_subscriptions WHERE device_id=?`, id); err != nil {
+		return false, err
+	}
+	return n > 0, tx.Commit()
 }
 
 var _ connect.Repository = (*SQLite)(nil)

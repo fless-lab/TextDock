@@ -87,7 +87,7 @@ func (s *SQLite) EnqueueRelay(ctx context.Context, m message.Message, driver str
 	if count >= limit {
 		return m, relay.ErrLimit
 	}
-	if _, err := insertMessage(ctx, tx, m); err != nil {
+	if _, err := insertMessage(ctx, tx, m, s.pushEnabled.Load()); err != nil {
 		return m, err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO relay_jobs(id,message_id,driver,created_at,expires_at) VALUES(?,?,?,?,?)`, "relay_"+rand.Text(), m.ID, driver, now, expires.UnixMilli()); err != nil {

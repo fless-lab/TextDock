@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"sync/atomic"
 
 	"github.com/fless-lab/TextDock/internal/message"
 	"github.com/fless-lab/TextDock/internal/simulation"
@@ -17,11 +18,12 @@ import (
 )
 
 type SQLite struct {
-	db     *sql.DB
-	keeper *sql.DB
+	db          *sql.DB
+	keeper      *sql.DB
+	pushEnabled atomic.Bool
 }
 
-const schemaVersion = 7
+const schemaVersion = 8
 
 func Open(path string) (*SQLite, error) {
 	// database/sql can discard a connection after a cancelled transaction.
@@ -107,6 +109,10 @@ func Open(path string) (*SQLite, error) {
 		return nil, err
 	}
 	if err := s.migrateGatewayHealth(); err != nil {
+		cleanup()
+		return nil, err
+	}
+	if err := s.migratePush(); err != nil {
 		cleanup()
 		return nil, err
 	}

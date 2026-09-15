@@ -86,7 +86,7 @@ func (s *SQLite) DeleteScenario(ctx context.Context, id string) error {
 	return err
 }
 
-func insertMessage(ctx context.Context, tx *sql.Tx, m message.Message) (int64, error) {
+func insertMessage(ctx context.Context, tx *sql.Tx, m message.Message, notify bool) (int64, error) {
 	data, err := json.Marshal(m)
 	if err != nil {
 		return 0, err
@@ -99,7 +99,16 @@ func insertMessage(ctx context.Context, tx *sql.Tx, m message.Message) (int64, e
 	if err != nil {
 		return 0, err
 	}
-	return r.LastInsertId()
+	id, err := r.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	if notify {
+		if err := enqueuePush(ctx, tx, m); err != nil {
+			return 0, err
+		}
+	}
+	return id, nil
 }
 func insertJob(ctx context.Context, tx *sql.Tx, job simulation.Job) error {
 	_, err := tx.ExecContext(ctx, `INSERT INTO jobs(id,message_id,kind,due,payload) VALUES(?,?,?,?,?)`, job.ID, job.MessageID, job.Kind, job.Due.UnixMilli(), job.Payload)
@@ -111,7 +120,7 @@ func (s *SQLite) Schedule(ctx context.Context, m message.Message, jobs []simulat
 		return err
 	}
 	defer tx.Rollback()
-	eventID, err := insertMessage(ctx, tx, m)
+	eventID, err := insertMessage(ctx, tx, m, s.pushEnabled.Load())
 	if err != nil {
 		return err
 	}

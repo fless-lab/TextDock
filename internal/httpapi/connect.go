@@ -85,6 +85,9 @@ func (s *Server) deviceAPI(w http.ResponseWriter, r *http.Request) {
 		internalError(w, err)
 		return
 	}
+	if s.devicePushAPI(w, r, d) {
+		return
+	}
 	if r.Method != http.MethodGet {
 		fail(w, 403, "paired devices have read-only access")
 		return

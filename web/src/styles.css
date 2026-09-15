@@ -15,6 +15,43 @@
   color: var(--text);
   background: var(--bg);
 }
+.phone-notifications {
+  margin: 18px 22px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 13px;
+  font-size: 12px;
+}
+.phone-notifications summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.phone-notifications h3 {
+  font-size: 13px;
+  font-weight: 550;
+  margin: 20px 0 10px;
+}
+.phone-notifications p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 12px 0;
+}
+.phone-push-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.phone-notifications .error-text {
+  color: #c15a50;
+}
+.phone-notifications .push-diagnostic {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
 .lab-history {
   list-style: none;
   padding: 0;

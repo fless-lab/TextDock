@@ -4,25 +4,11 @@ import { APIError, type Message } from "./api";
 import type { Device } from "./components/ConnectDialog";
 import { copyText } from "./clipboard";
 import { useLiveEvents } from "./hooks/useLiveEvents";
+import { deviceAPI } from "./phone/api";
+import { disableNotifications } from "./phone/push";
+import { PhoneNotifications } from "./components/PhoneNotifications";
 
 const key = "textdock-device-token";
-async function deviceAPI<T>(
-  path: string,
-  token: string | null,
-  options: RequestInit = {},
-): Promise<T> {
-  const response = await fetch(`/connect/v1${path}`, {
-    ...options,
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-    },
-  });
-  const data = await response.json();
-  if (!response.ok)
-    throw new APIError(response.status, data.error || "Request failed");
-  return data;
-}
 
 export function PhoneApp({ pairingCode }: { pairingCode: string | null }) {
   const [token, setToken] = useState(() => localStorage.getItem(key));
@@ -32,6 +18,8 @@ export function PhoneApp({ pairingCode }: { pairingCode: string | null }) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState(pairingCode);
+  const [manualCode, setManualCode] = useState(pairingCode || "");
+  const [refresh, setRefresh] = useState(0);
   const [theme, setTheme] = useState(
     () =>
       localStorage.getItem("textdock-theme") ||
@@ -43,6 +31,7 @@ export function PhoneApp({ pairingCode }: { pairingCode: string | null }) {
   );
 
   function disconnect(reason: string) {
+    void disableNotifications(token).catch(() => {});
     localStorage.removeItem(key);
     setToken(null);
     setDevice(undefined);
@@ -53,6 +42,14 @@ export function PhoneApp({ pairingCode }: { pairingCode: string | null }) {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("textdock-theme", theme);
   }, [theme]);
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const update = (event: MessageEvent) => {
+      if (event.data?.type === "textdock-refresh") setRefresh((n) => n + 1);
+    };
+    navigator.serviceWorker.addEventListener("message", update);
+    return () => navigator.serviceWorker.removeEventListener("message", update);
+  }, []);
   useEffect(() => {
     if (!token || code) return;
     const controller = new AbortController();
@@ -87,7 +84,7 @@ export function PhoneApp({ pairingCode }: { pairingCode: string | null }) {
         else setError(e.message);
       });
     return () => controller.abort();
-  }, [token, device, live.revision]);
+  }, [token, device, live.revision, refresh]);
   useEffect(() => {
     if (notice) {
       const timer = setTimeout(() => setNotice(""), 3000);
@@ -99,21 +96,34 @@ export function PhoneApp({ pairingCode }: { pairingCode: string | null }) {
     setBusy(true);
     setError("");
     try {
+      let challenge = manualCode.trim();
+      if (challenge.includes("://")) {
+        const url = new URL(challenge);
+        if (url.origin !== location.origin)
+          throw new Error(
+            "This pairing link belongs to another TextDock server.",
+          );
+        challenge = new URLSearchParams(url.hash.slice(1)).get("pair") || "";
+      }
+      if (!challenge)
+        throw new Error("Paste a pairing code or link from the desktop.");
       const result = await deviceAPI<{ token: string; device: Device }>(
         "/claim",
         null,
         {
           method: "POST",
           body: JSON.stringify({
-            code,
+            code: challenge,
             name: new FormData(e.currentTarget).get("name"),
           }),
         },
       );
+      await disableNotifications(token).catch(() => {});
       localStorage.setItem(key, result.token);
       setToken(result.token);
       setDevice(result.device);
       setCode(null);
+      setManualCode("");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -148,18 +158,34 @@ export function PhoneApp({ pairingCode }: { pairingCode: string | null }) {
           )}
         </div>
       </header>
-      {code ? (
+      {code || !token ? (
         <section className="phone-setup">
           <h1>Connect this phone</h1>
           <p className="modal-description">
             Choose a name to identify this device. This grants read-only access
             to the recipient selected on your computer.
           </p>
+          <p className="modal-description">
+            For home-screen use on iPhone/iPad, install this page from Safari,
+            open the installed app, then paste a fresh pairing link here.
+          </p>
           <form
             onSubmit={(e) => {
               void claim(e);
             }}
           >
+            <label>
+              Pairing code or link
+              <input
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                placeholder="Paste the code or link from TextDock"
+              />
+            </label>
             <label>
               Device name
               <input
@@ -191,6 +217,13 @@ export function PhoneApp({ pairingCode }: { pairingCode: string | null }) {
               {live.state === "connected" ? "Live" : "Reconnecting…"}
             </span>
           </section>
+          {token && (
+            <PhoneNotifications
+              token={token}
+              deviceId={device.id}
+              expiresAt={device.expires_at}
+            />
+          )}
           <section className="phone-messages" aria-label="Phone messages">
             {messages.length ? (
               [...messages].reverse().map((message) => (

@@ -10,7 +10,7 @@ export default defineConfig({
   webServer: {
     command: '../bin/textdock --listen 127.0.0.1:18258 --db :memory:',
     url: 'http://127.0.0.1:18258/healthz',
-    env: { TEXTDOCK_TOKEN: 'textdock-e2e-token-only', TEXTDOCK_WEBHOOK_SECRET: 'textdock-e2e-webhook-secret', TEXTDOCK_RELAY_DRIVER: 'android', TEXTDOCK_ADB_ENABLED: 'true', TEXTDOCK_ADB_PATH: '../bin/adb-fixture' },
+    env: { TEXTDOCK_TOKEN: 'textdock-e2e-token-only', TEXTDOCK_WEBHOOK_SECRET: 'textdock-e2e-webhook-secret', TEXTDOCK_RELAY_DRIVER: 'android', TEXTDOCK_ADB_ENABLED: 'true', TEXTDOCK_ADB_PATH: '../bin/adb-fixture', TEXTDOCK_PUSH_ENABLED: 'true', TEXTDOCK_PUBLIC_URL: 'http://127.0.0.1:18258', TEXTDOCK_PUSH_SUBJECT: 'push-test@example.test', TEXTDOCK_PUSH_ALLOWED_HOSTS: 'push.invalid' },
     reuseExistingServer: false,
   },
   projects: [

@@ -88,7 +88,7 @@ func (s *SQLite) reserveInjection(ctx context.Context, m message.Message, serial
 	if !create {
 		return result, nil
 	}
-	if _, err := insertMessage(ctx, tx, m); err != nil {
+	if _, err := insertMessage(ctx, tx, m, s.pushEnabled.Load()); err != nil {
 		return result, err
 	}
 	now := time.Now().UTC()

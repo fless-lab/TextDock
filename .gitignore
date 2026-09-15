@@ -11,6 +11,8 @@ internal/ui/dist/*
 !internal/ui/dist/.gitkeep
 web/test-results/
 web/playwright-report/
+web/public/phone-icon-*.png
+web/public/phone-badge-*.png
 site/node_modules/
 site/content/
 site/.vitepress/cache/

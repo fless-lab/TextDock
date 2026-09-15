@@ -21,6 +21,7 @@ import (
 	"github.com/fless-lab/TextDock/internal/config"
 	"github.com/fless-lab/TextDock/internal/devicelab"
 	"github.com/fless-lab/TextDock/internal/httpapi"
+	"github.com/fless-lab/TextDock/internal/push"
 	"github.com/fless-lab/TextDock/internal/relay"
 	"github.com/fless-lab/TextDock/internal/simulation"
 	"github.com/fless-lab/TextDock/internal/storage"
@@ -124,6 +125,19 @@ func run() error {
 		return err
 	}
 	api.Lab = &devicelab.Service{Config: labConfig, Runner: devicelab.Executor{Path: labConfig.Path, Timeout: labConfig.Timeout}, Store: store, Changed: api.Hub.Changed, Resync: api.Hub.Resync}
+	pushConfig, err := push.FromEnv(*publicURL)
+	if err != nil {
+		return err
+	}
+	api.Push = &push.Service{Store: store, Config: pushConfig}
+	if pushConfig.Enabled {
+		keys, err := store.PushKeys(context.Background())
+		if err != nil {
+			return err
+		}
+		api.Push.Keys = keys
+		store.SetPushEnabled(true)
+	}
 	server := &http.Server{
 		Addr: *addr, Handler: api.Handler(),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
@@ -135,6 +149,9 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	pushDone := make(chan struct{})
+	go func() { defer close(pushDone); api.Push.Run(ctx) }()
+	defer func() { stop(); <-pushDone }()
 	labDone := make(chan struct{})
 	go func() { defer close(labDone); api.Lab.Recover(ctx) }()
 	defer func() { stop(); <-labDone }()
