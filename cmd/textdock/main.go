@@ -122,6 +122,7 @@ func run() error {
 	api := &httpapi.Server{Store: store, Devices: store, Workspaces: store, Simulation: store, Relay: relayService, WebhookSecret: os.Getenv("TEXTDOCK_WEBHOOK_SECRET"), Token: token, Version: version, UI: ui.Files(), Listen: *addr, PublicURL: *publicURL, OTPPattern: otpRegex}
 	labConfig, err := devicelab.FromEnv()
 	api.Keys = store
+	api.Users = store
 	if err != nil {
 		return err
 	}

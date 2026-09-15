@@ -5,6 +5,12 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+- Operator-created user accounts, Argon2id password hashes and expiring/revocable
+  browser sessions with bounded login work and attempt budgets.
+- Project viewer/member/admin roles, member management and role-aware desktop UI.
+- Password change/reset, account disable/enable and session management.
+- Cross-user/project authorization and delayed-response isolation checks.
+
 ## [0.8.0-beta.1] - 2026-09-15
 
 ### Added

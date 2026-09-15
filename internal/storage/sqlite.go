@@ -23,7 +23,7 @@ type SQLite struct {
 	pushEnabled atomic.Bool
 }
 
-const schemaVersion = 9
+const schemaVersion = 10
 
 func Open(path string) (*SQLite, error) {
 	// database/sql can discard a connection after a cancelled transaction.
@@ -117,6 +117,10 @@ func Open(path string) (*SQLite, error) {
 		return nil, err
 	}
 	if err := s.migrateKeys(); err != nil {
+		cleanup()
+		return nil, err
+	}
+	if err := s.migrateUsers(); err != nil {
 		cleanup()
 		return nil, err
 	}

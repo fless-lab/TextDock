@@ -23,8 +23,9 @@ import (
 
 type principalKey struct{}
 type principal struct {
-	Key  access.Key
-	Hash string
+	Key     access.Key
+	Hash    string
+	Session *access.UserSession
 }
 
 func keyPrincipal(r *http.Request) (principal, bool) {
@@ -65,8 +66,11 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, credential
 			internalError(w, err)
 			return false
 		}
-		*r = *r.WithContext(context.WithValue(r.Context(), principalKey{}, principal{k, hash}))
+		*r = *r.WithContext(context.WithValue(r.Context(), principalKey{}, principal{Key: k, Hash: hash}))
 		return true
+	}
+	if strings.HasPrefix(credential, "td_user_") {
+		return s.userAuthenticated(w, r, credential)
 	}
 	if s.Token != "" {
 		a, b := sha256.Sum256([]byte(credential)), sha256.Sum256([]byte(s.Token))
@@ -308,6 +312,10 @@ func (s *Server) scopedAPI(w http.ResponseWriter, r *http.Request) bool {
 }
 func (s *Server) keyAlive(r *http.Request) error {
 	if p, ok := keyPrincipal(r); ok {
+		if p.Session != nil {
+			_, err := s.Users.UserSessionByHash(r.Context(), p.Hash)
+			return err
+		}
 		_, err := s.Keys.APIKeyByHash(r.Context(), p.Hash)
 		return err
 	}

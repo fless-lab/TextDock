@@ -1,4 +1,4 @@
-// Package access defines scoped machine credentials, separate from the operator token.
+// Package access defines scoped credentials and project roles, separate from the operator token.
 package access
 
 import (

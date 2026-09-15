@@ -31,6 +31,8 @@ import (
 )
 
 type Server struct {
+	Users         access.Users
+	Logins        access.LoginGuard
 	Keys          access.Repository
 	Store         message.Repository
 	Token         string
@@ -55,6 +57,7 @@ func (s *Server) Handler() http.Handler {
 		writeJSON(w, 200, map[string]string{"status": "ok"})
 	})
 	mux.Handle("/api/", s.authorize(http.HandlerFunc(s.api)))
+	mux.HandleFunc("POST /api/v1/auth/login", s.login)
 	mux.HandleFunc("POST /connect/v1/claim", s.claimPair)
 	mux.HandleFunc("/connect/v1/", s.deviceAPI)
 	mux.Handle("POST /2010-04-01/Accounts/{account}/Messages.json", s.authorize(http.HandlerFunc(s.twilio)))
@@ -122,6 +125,9 @@ func (s *Server) authorize(next http.Handler) http.Handler {
 }
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request) {
+	if s.teamAPI(w, r) || s.accountAPI(w, r) || s.userAPI(w, r) {
+		return
+	}
 	if s.scopedAPI(w, r) || s.keysAPI(w, r) {
 		return
 	}
@@ -177,7 +183,7 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 		s.Hub.Revoke(id)
 		w.WriteHeader(204)
 	case r.Method == "GET" && r.URL.Path == "/api/v1/info":
-		writeJSON(w, 200, map[string]any{"name": "TextDock", "version": s.Version, "mode": "local", "auth_enabled": s.Token != "", "webhook_signing": s.WebhookSecret != ""})
+		s.info(w, r)
 	case r.Method == "POST" && r.URL.Path == "/api/v1/messages":
 		var in message.Input
 		if err := decode(r, &in); err != nil {

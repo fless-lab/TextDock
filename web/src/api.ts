@@ -27,6 +27,30 @@ export interface Info {
   version: string;
   mode: string;
   auth_enabled: boolean;
+  operator: boolean;
+  session?: UserSession;
+  api_key?: { permissions: string[] };
+}
+
+export interface User {
+  id: string;
+  username: string;
+  name: string;
+  disabled: boolean;
+}
+export interface Membership {
+  project_id: string;
+  user_id: string;
+  username: string;
+  name: string;
+  role: "viewer" | "member" | "admin";
+}
+export interface UserSession {
+  id: string;
+  user: User;
+  memberships: Membership[];
+  created_at: string;
+  expires_at: string;
 }
 
 export class APIError extends Error {

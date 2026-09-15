@@ -24,9 +24,11 @@ interface Attempt {
 export function MessageEvents({
   id,
   revision,
+  operator = true,
 }: {
   id: string;
   revision: number;
+  operator?: boolean;
 }) {
   const [events, setEvents] = useState<Event[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -39,10 +41,12 @@ export function MessageEvents({
       api<{ events: Event[] }>(`/messages/${id}/events`, {
         signal: controller.signal,
       }),
-      api<{ attempts: Attempt[] }>(
-        `/webhooks?message_id=${encodeURIComponent(id)}`,
-        { signal: controller.signal },
-      ),
+      operator
+        ? api<{ attempts: Attempt[] }>(
+            `/webhooks?message_id=${encodeURIComponent(id)}`,
+            { signal: controller.signal },
+          )
+        : Promise.resolve({ attempts: [] as Attempt[] }),
     ])
       .then(([history, deliveries]) => {
         setEvents(history.events);
@@ -53,7 +57,7 @@ export function MessageEvents({
         if (!controller.signal.aborted) setError(e.message);
       });
     return () => controller.abort();
-  }, [id, revision, refresh]);
+  }, [id, revision, refresh, operator]);
   async function retry(job: string) {
     try {
       await api(`/webhooks/${job}/retry`, { method: "POST" });
@@ -75,40 +79,44 @@ export function MessageEvents({
           </li>
         ))}
       </ol>
-      <h3>Webhook attempts</h3>
-      {attempts.length ? (
-        attempts.map((attempt) => (
-          <details className="webhook-attempt" key={attempt.id}>
-            <summary>
-              <span>{attempt.status || "Network error"}</span> ·{" "}
-              {attempt.duration_ms}ms ·{" "}
-              {new Date(attempt.at).toLocaleTimeString()}
-            </summary>
-            <p className="webhook-url">{attempt.url}</p>
-            <small>{attempt.content_type}</small>
-            <pre>{JSON.stringify(attempt.headers || {}, null, 2)}</pre>
-            <pre>{attempt.request}</pre>
-            <h4>Response</h4>
-            <pre>{attempt.error || attempt.response || "(empty body)"}</pre>
-            {attempt.response_truncated && (
-              <p className="modal-description">
-                Response preview limited to 4096 bytes.
-              </p>
-            )}
-            <button
-              className="secondary"
-              onClick={() => {
-                void retry(attempt.job_id);
-              }}
-            >
-              Replay callback
-            </button>
-          </details>
-        ))
-      ) : (
-        <p className="modal-description">
-          No callback attempts recorded for this message.
-        </p>
+      {operator && (
+        <>
+          <h3>Webhook attempts</h3>
+          {attempts.length ? (
+            attempts.map((attempt) => (
+              <details className="webhook-attempt" key={attempt.id}>
+                <summary>
+                  <span>{attempt.status || "Network error"}</span> ·{" "}
+                  {attempt.duration_ms}ms ·{" "}
+                  {new Date(attempt.at).toLocaleTimeString()}
+                </summary>
+                <p className="webhook-url">{attempt.url}</p>
+                <small>{attempt.content_type}</small>
+                <pre>{JSON.stringify(attempt.headers || {}, null, 2)}</pre>
+                <pre>{attempt.request}</pre>
+                <h4>Response</h4>
+                <pre>{attempt.error || attempt.response || "(empty body)"}</pre>
+                {attempt.response_truncated && (
+                  <p className="modal-description">
+                    Response preview limited to 4096 bytes.
+                  </p>
+                )}
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    void retry(attempt.job_id);
+                  }}
+                >
+                  Replay callback
+                </button>
+              </details>
+            ))
+          ) : (
+            <p className="modal-description">
+              No callback attempts recorded for this message.
+            </p>
+          )}
+        </>
       )}
       {notice && (
         <p role="status" className="modal-description">

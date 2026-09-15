@@ -1,6 +1,8 @@
 import { StrictMode, useEffect, useRef, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { KeysDialog } from "./components/KeysDialog";
+import { TeamDialog } from "./components/TeamDialog";
+import { AccountDialog } from "./components/AccountDialog";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -49,6 +51,8 @@ import {
 function App() {
   const [info, setInfo] = useState<Info>();
   const [locked, setLocked] = useState(false);
+  const [loginMode, setLoginMode] = useState<"operator" | "user">("operator");
+  const authRevision = useRef(0);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -91,6 +95,8 @@ function App() {
     | "relay"
     | "device-lab"
     | "keys"
+    | "team"
+    | "account"
   >();
   const [tab, setTab] = useState<"message" | "json" | "events">("message");
   const [busy, setBusy] = useState(false);
@@ -100,12 +106,37 @@ function App() {
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
   );
   const search = useRef<HTMLInputElement>(null);
+  const operator = info?.operator !== false;
+  const activeProject =
+    workspaces.inboxes.find((b) => b.id === inbox)?.project_id || "";
+  const role = info?.session?.memberships.find(
+    (m) => m.project_id === activeProject,
+  )?.role;
+  const canRead =
+    operator ||
+    !!role ||
+    !!info?.api_key?.permissions.includes("messages:read");
+  const canWrite =
+    operator ||
+    role === "member" ||
+    role === "admin" ||
+    !!info?.api_key?.permissions.includes("messages:write");
+  const canDelete =
+    operator ||
+    role === "admin" ||
+    !!info?.api_key?.permissions.includes("messages:delete");
   useEffect(() => {
-    if (info && !locked)
+    const controller = new AbortController();
+    if (info && !locked && operator)
       void api<RelayInfo>("/relay")
-        .then(setRelay)
-        .catch((e) => setError(e.message));
-  }, [info, locked]);
+        .then((v) => {
+          if (!controller.signal.aborted) setRelay(v);
+        })
+        .catch((e) => {
+          if (!controller.signal.aborted) setError(e.message);
+        });
+    return () => controller.abort();
+  }, [info, locked, operator]);
   useEffect(() => {
     if (modal === "compose")
       intentKey.current = Array.from(crypto.getRandomValues(new Uint32Array(4)))
@@ -113,13 +144,19 @@ function App() {
         .join("-");
   }, [modal]);
   useEffect(() => {
-    if (info && !locked)
+    const controller = new AbortController();
+    if (info && !locked && operator)
       void api<{ scenarios: Scenario[] }>(
         `/scenarios?inbox=${encodeURIComponent(inbox)}`,
       )
-        .then((data) => setScenarios(data.scenarios))
-        .catch((e) => setError(e.message));
-  }, [info, locked, inbox, refresh]);
+        .then((data) => {
+          if (!controller.signal.aborted) setScenarios(data.scenarios);
+        })
+        .catch((e) => {
+          if (!controller.signal.aborted) setError(e.message);
+        });
+    return () => controller.abort();
+  }, [info, locked, inbox, refresh, operator]);
   const parameters = new URLSearchParams({
     inbox,
     q: query,
@@ -139,7 +176,11 @@ function App() {
     setChecked([]);
   }
   function chooseInbox(id: string) {
+    authRevision.current++;
+    setBusy(false);
+    setTab("message");
     setInbox(id);
+    setMessages([]);
     setFilters({ to: "", run_id: "", tag: "", since: "" });
     setQuery("");
     setFavorites(false);
@@ -148,19 +189,34 @@ function App() {
     setRefresh((n) => n + 1);
   }
   useEffect(() => {
+    const controller = new AbortController();
     if (info && !locked)
-      void api<Workspaces>("/workspaces")
-        .then(setWorkspaces)
-        .catch((e) => setError(e.message));
+      void api<Workspaces>("/workspaces", { signal: controller.signal })
+        .then((data) => {
+          if (!controller.signal.aborted) {
+            setWorkspaces(data);
+            if (!data.inboxes.some((b) => b.id === inbox))
+              chooseInbox(data.inboxes[0]?.id || "");
+          }
+        })
+        .catch((e) => {
+          if (!controller.signal.aborted) setError(e.message);
+        });
+    return () => controller.abort();
   }, [info, locked, refresh]);
   const live = useLiveEvents(
-    info && !locked ? "/api/v1/events" : undefined,
+    info && !locked
+      ? canRead && inbox
+        ? `/api/v1/events?inbox=${encodeURIComponent(inbox)}`
+        : info.session
+          ? "/api/v1/account/events"
+          : undefined
+      : undefined,
     sessionStorage.getItem("textdock-token"),
   );
   useEffect(() => {
     if (live.state === "unauthorized") {
-      setLocked(true);
-      setMessages([]);
+      endSession();
     }
   }, [live.state]);
 
@@ -200,38 +256,91 @@ function App() {
   }, [notice]);
 
   async function loadInfo() {
+    const revision = ++authRevision.current;
     try {
-      setInfo(await api<Info>("/info"));
+      const next = await api<Info>("/info");
+      const data = await api<Workspaces>("/workspaces");
+      if (revision !== authRevision.current) return;
+      setWorkspaces(data);
+      chooseInbox(
+        data.inboxes.some((b) => b.id === inbox)
+          ? inbox
+          : data.inboxes[0]?.id || "",
+      );
+      setInfo(next);
       setLocked(false);
       setError("");
     } catch (e) {
-      if (e instanceof APIError && e.status === 401) setLocked(true);
+      if (revision !== authRevision.current) return;
+      if (e instanceof APIError && e.status === 401) endSession();
       setError((e as Error).message);
+    }
+  }
+  function endSession() {
+    authRevision.current++;
+    setBusy(false);
+    setTab("message");
+    sessionStorage.removeItem("textdock-token");
+    setLocked(true);
+    setInfo(undefined);
+    setMessages([]);
+    setSelected(undefined);
+    setChecked([]);
+    setScenarios([]);
+    setRelay({ enabled: false, driver: "", limit_per_minute: 10 });
+    setComposeMode("capture");
+    setWorkspaces({ projects: [], inboxes: [] });
+    setModal(undefined);
+    setNotice("");
+  }
+  async function signIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const input = new FormData(event.currentTarget);
+    try {
+      let token = String(input.get("token") || "");
+      if (loginMode === "user")
+        token = (
+          await api<{ token: string }>("/auth/login", {
+            method: "POST",
+            body: JSON.stringify({
+              username: input.get("username"),
+              password: input.get("password"),
+            }),
+          })
+        ).token;
+      sessionStorage.setItem("textdock-token", token);
+      await loadInfo();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
     }
   }
   useEffect(() => {
     void loadInfo();
   }, []);
   useEffect(() => {
-    if (!info || locked) return;
+    if (!info || locked || !inbox || !canRead) return;
     let stopped = false;
     const controller = new AbortController();
     async function poll() {
+      const revision = authRevision.current;
       try {
         const data = await api<{ messages: Message[]; next_cursor: string }>(
           `/messages?${queryString}`,
           { signal: controller.signal },
         );
-        if (!stopped) {
+        if (!stopped && revision === authRevision.current) {
           setMessages(data.messages);
           setNextCursor(data.next_cursor);
           setError("");
         }
       } catch (e) {
-        if (!stopped) {
+        if (!stopped && revision === authRevision.current) {
           if (e instanceof APIError && e.status === 401) {
-            setLocked(true);
-            setMessages([]);
+            endSession();
           }
           setError((e as Error).message);
         }
@@ -243,7 +352,7 @@ function App() {
       clearTimeout(debounce);
       controller.abort();
     };
-  }, [info, locked, queryString, refresh, live.revision]);
+  }, [info, locked, queryString, refresh, live.revision, canRead]);
 
   const visible = messages;
   const current = visible.find((m) => m.id === selected);
@@ -257,6 +366,8 @@ function App() {
   }
   async function send(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!canWrite || !inbox) return;
+    const revision = authRevision.current;
     setBusy(true);
     const data = new FormData(e.currentTarget);
     try {
@@ -274,6 +385,7 @@ function App() {
           }),
         },
       );
+      if (revision !== authRevision.current) return;
       setQuery("");
       setOtpOnly(false);
       setFavorites(false);
@@ -284,6 +396,7 @@ function App() {
         ...previous.filter((item) => item.id !== m.id),
       ]);
       setSelected(m.id);
+      setTab("message");
       setModal(undefined);
       setRefresh((n) => n + 1);
       setNotice(
@@ -294,23 +407,26 @@ function App() {
             : "Simulation started.",
       );
     } catch (e) {
-      setError((e as Error).message);
+      if (revision === authRevision.current) setError((e as Error).message);
     } finally {
-      setBusy(false);
+      if (revision === authRevision.current) setBusy(false);
     }
   }
   async function remove(m: Message) {
+    if (!canDelete) return;
+    const revision = authRevision.current;
     setBusy(true);
     try {
       await api(`/messages/${m.id}`, { method: "DELETE" });
+      if (revision !== authRevision.current) return;
       setSelected(undefined);
       setMessages((previous) => previous.filter((item) => item.id !== m.id));
       setRefresh((n) => n + 1);
       setNotice("Message deleted");
     } catch (e) {
-      setError((e as Error).message);
+      if (revision === authRevision.current) setError((e as Error).message);
     } finally {
-      setBusy(false);
+      if (revision === authRevision.current) setBusy(false);
     }
   }
   function download(m: Message) {
@@ -328,50 +444,59 @@ function App() {
     m: Message,
     patch: { favorite?: boolean; tags?: string[] },
   ) {
+    if (!canWrite) return;
+    const revision = authRevision.current;
     try {
       const updated = await api<Message>(`/messages/${m.id}`, {
         method: "PATCH",
         body: JSON.stringify(patch),
       });
+      if (revision !== authRevision.current) return;
       setMessages((items) =>
         items.map((item) => (item.id === updated.id ? updated : item)),
       );
       setRefresh((n) => n + 1);
     } catch (e) {
-      setError((e as Error).message);
+      if (revision === authRevision.current) setError((e as Error).message);
     }
   }
   async function deleteChecked() {
+    if (!canDelete) return;
+    const revision = authRevision.current;
     setBusy(true);
     try {
       await api("/messages/delete", {
         method: "POST",
         body: JSON.stringify({ ids: checked }),
       });
+      if (revision !== authRevision.current) return;
       resetPage();
       setRefresh((n) => n + 1);
       setNotice("Selected messages deleted.");
     } catch (e) {
-      setError((e as Error).message);
+      if (revision === authRevision.current) setError((e as Error).message);
     } finally {
-      setBusy(false);
+      if (revision === authRevision.current) setBusy(false);
     }
   }
   async function exportPage() {
+    const revision = authRevision.current;
     try {
       const token = sessionStorage.getItem("textdock-token");
       const response = await fetch(`/api/v1/export?${queryString}&format=csv`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error("Export failed");
-      const url = URL.createObjectURL(await response.blob());
+      const blob = await response.blob();
+      if (revision !== authRevision.current) return;
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = "textdock.csv";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      setError((e as Error).message);
+      if (revision === authRevision.current) setError((e as Error).message);
     }
   }
 
@@ -391,31 +516,69 @@ function App() {
           <MessageSquare />
         </div>
         <h1>TextDock</h1>
-        <p>Enter this server’s TextDock token to open the inbox.</p>
+        <p>
+          {loginMode === "operator"
+            ? "Enter this server’s TextDock token to open the inbox."
+            : "Sign in with the account created by your server operator."}
+        </p>
         <form
           onSubmit={(e) => {
-            e.preventDefault();
-            sessionStorage.setItem(
-              "textdock-token",
-              String(new FormData(e.currentTarget).get("token")),
-            );
-            void loadInfo();
+            void signIn(e);
           }}
         >
-          <label>
-            Server token
-            <input
-              name="token"
-              type="password"
-              autoComplete="current-password"
-              required
-              autoFocus
-            />
-          </label>
-          <button className="primary">
-            Unlock inbox <ArrowUpRight size={16} />
+          {loginMode === "operator" ? (
+            <label>
+              Server token
+              <input
+                name="token"
+                type="password"
+                autoComplete="current-password"
+                required
+                autoFocus
+              />
+            </label>
+          ) : (
+            <>
+              <label>
+                Username
+                <input
+                  name="username"
+                  required
+                  maxLength={64}
+                  autoComplete="username"
+                  autoFocus
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  minLength={12}
+                  maxLength={128}
+                  autoComplete="current-password"
+                />
+              </label>
+            </>
+          )}
+          <button className="primary" disabled={busy}>
+            {loginMode === "operator" ? "Unlock inbox" : "Sign in"}{" "}
+            <ArrowUpRight size={16} />
           </button>
         </form>
+        <button
+          className="secondary"
+          disabled={busy}
+          onClick={() => {
+            setLoginMode(loginMode === "operator" ? "user" : "operator");
+            setError("");
+          }}
+        >
+          {loginMode === "operator"
+            ? "Sign in with a user account"
+            : "Use operator token"}
+        </button>
         {error && (
           <p role="alert" className="error-text">
             {error}
@@ -473,22 +636,32 @@ function App() {
             <Code2 size={18} />
             Integration
           </button>
-          <button className="nav-item" onClick={() => setModal("scenarios")}>
-            <FlaskConical size={18} />
-            Scenarios
-          </button>
-          <button className="nav-item" onClick={() => setModal("relay")}>
-            <Smartphone size={18} />
-            Relay
-          </button>
-          <button className="nav-item" onClick={() => setModal("device-lab")}>
-            <Terminal size={18} />
-            Device lab
-          </button>
-          <button className="nav-item" onClick={() => setModal("connect")}>
-            <Smartphone size={18} />
-            Open on phone
-          </button>
+          {operator && (
+            <>
+              <button
+                className="nav-item"
+                onClick={() => setModal("scenarios")}
+              >
+                <FlaskConical size={18} />
+                Scenarios
+              </button>
+              <button className="nav-item" onClick={() => setModal("relay")}>
+                <Smartphone size={18} />
+                Relay
+              </button>
+              <button
+                className="nav-item"
+                onClick={() => setModal("device-lab")}
+              >
+                <Terminal size={18} />
+                Device lab
+              </button>
+              <button className="nav-item" onClick={() => setModal("connect")}>
+                <Smartphone size={18} />
+                Open on phone
+              </button>
+            </>
+          )}
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-footer">
@@ -537,6 +710,14 @@ function App() {
             </button>
           </div>
           <div className="connection">
+            {info?.session && (
+              <button
+                className="text-button"
+                onClick={() => setModal("account")}
+              >
+                Your account
+              </button>
+            )}
             <span
               className={
                 error || live.state !== "connected"
@@ -544,13 +725,15 @@ function App() {
                   : "live-dot"
               }
             />
-            {error
-              ? "Connection interrupted"
-              : info
-                ? live.state === "connected"
-                  ? "Connected"
-                  : "Reconnecting…"
-                : "Connecting…"}
+            {!inbox
+              ? "No inbox access"
+              : error
+                ? "Connection interrupted"
+                : info
+                  ? live.state === "connected"
+                    ? "Connected"
+                    : "Reconnecting…"
+                  : "Connecting…"}
           </div>
         </header>
         <section className="page-heading">
@@ -571,6 +754,7 @@ function App() {
           </div>
           <button
             className="primary"
+            disabled={!canWrite || !inbox}
             onClick={() => {
               setError("");
               setModal("compose");
@@ -580,6 +764,12 @@ function App() {
             Send test SMS
           </button>
         </section>
+        {info?.session && !inbox && (
+          <p role="status" className="modal-description">
+            No project access assigned. Ask your operator or project
+            administrator to add your account.
+          </p>
+        )}
         {error && (
           <div role="alert" className="error-banner">
             {error}
@@ -656,6 +846,7 @@ function App() {
           </details>
           <button
             className="text-button"
+            disabled={!canRead || !inbox}
             onClick={() => {
               void exportPage();
             }}
@@ -666,7 +857,7 @@ function App() {
           {checked.length > 0 && (
             <button
               className="text-button danger"
-              disabled={busy}
+              disabled={busy || !canDelete}
               onClick={() => {
                 void deleteChecked();
               }}
@@ -684,6 +875,7 @@ function App() {
                 <input
                   type="checkbox"
                   aria-label="Select page"
+                  disabled={!canDelete}
                   checked={
                     visible.length > 0 &&
                     visible.every((m) => checked.includes(m.id))
@@ -703,6 +895,7 @@ function App() {
                     className="message-checkbox"
                     type="checkbox"
                     aria-label={`Select message ${m.id}`}
+                    disabled={!canDelete}
                     checked={checked.includes(m.id)}
                     onChange={(e) =>
                       setChecked((previous) =>
@@ -775,6 +968,7 @@ function App() {
                 <button
                   className="text-button"
                   onClick={() => setModal("compose")}
+                  disabled={!canWrite || !inbox}
                 >
                   Send test SMS <Plus size={14} />
                 </button>
@@ -832,6 +1026,7 @@ function App() {
                           ? "Remove from favorites"
                           : "Add to favorites"
                       }
+                      disabled={!canWrite}
                       onClick={() => {
                         void update(current, { favorite: !current.favorite });
                       }}
@@ -850,7 +1045,7 @@ function App() {
                     </button>
                     <button
                       className="icon-button danger"
-                      disabled={busy}
+                      disabled={busy || !canDelete}
                       onClick={() => {
                         void remove(current);
                       }}
@@ -894,13 +1089,17 @@ function App() {
                 <div className="detail-content">
                   {tab === "events" ? (
                     <>
-                      {current.mode === "relay" && (
+                      {operator && current.mode === "relay" && (
                         <RelayDetails
                           id={current.id}
                           revision={live.revision}
                         />
                       )}
-                      <MessageEvents id={current.id} revision={live.revision} />
+                      <MessageEvents
+                        id={current.id}
+                        revision={live.revision}
+                        operator={operator}
+                      />
                     </>
                   ) : tab === "json" ? (
                     <div className="raw-view">
@@ -1024,7 +1223,9 @@ function App() {
                             placeholder="Comma-separated tags"
                           />
                         </label>
-                        <button className="secondary">Save tags</button>
+                        <button className="secondary" disabled={!canWrite}>
+                          Save tags
+                        </button>
                       </form>
                       <button
                         className="text-button"
@@ -1084,9 +1285,13 @@ function App() {
                 onChange={(e) => setComposeMode(e.target.value)}
               >
                 <option value="capture">Capture only</option>
-                <option value="simulate">Simulate delivery</option>
-                <option value="inbound">Simulate incoming SMS</option>
-                <option value="relay" disabled={!relay.enabled}>
+                <option value="simulate" disabled={!operator}>
+                  Simulate delivery
+                </option>
+                <option value="inbound" disabled={!operator}>
+                  Simulate incoming SMS
+                </option>
+                <option value="relay" disabled={!operator || !relay.enabled}>
                   Relay — real SMS{!relay.enabled ? " (disabled)" : ""}
                 </option>
               </select>
@@ -1266,10 +1471,17 @@ function App() {
           data={workspaces}
           select={chooseInbox}
           openKeys={() => setModal("keys")}
+          openTeam={() => setModal("team")}
+          operator={operator}
+          adminProjects={
+            info?.session?.memberships
+              .filter((m) => m.role === "admin")
+              .map((m) => m.project_id) || []
+          }
           close={() => setModal(undefined)}
         />
       )}
-      {modal === "keys" && (
+      {modal === "keys" && operator && (
         <KeysDialog
           data={workspaces}
           inbox={inbox}
@@ -1280,15 +1492,30 @@ function App() {
       {modal === "commands" && (
         <Modal title="Commands" close={() => setModal(undefined)}>
           <div className="command-list">
-            <button onClick={() => setModal("compose")}>Send test SMS</button>
-            <button onClick={() => setModal("connect")}>Connect a phone</button>
+            <button
+              disabled={!canWrite || !inbox}
+              onClick={() => setModal("compose")}
+            >
+              Send test SMS
+            </button>
+            {operator && (
+              <button onClick={() => setModal("connect")}>
+                Connect a phone
+              </button>
+            )}
             <button onClick={() => setModal("workspaces")}>
               Manage projects and inboxes
             </button>
             <button onClick={() => setModal("integrate")}>
               API integration
             </button>
-            <button onClick={() => setModal("keys")}>Manage API keys</button>
+            {operator && (
+              <button onClick={() => setModal("keys")}>Manage API keys</button>
+            )}
+            <button onClick={() => setModal("team")}>Manage team</button>
+            {info?.session && (
+              <button onClick={() => setModal("account")}>Your account</button>
+            )}
             <button
               onClick={() => {
                 setTheme(theme === "dark" ? "light" : "dark");
@@ -1332,24 +1559,45 @@ function App() {
             Configure the server using TEXTDOCK_LISTEN, TEXTDOCK_DB and
             TEXTDOCK_TOKEN. No cloud account is needed.
           </p>
-          <button className="secondary" onClick={() => setModal("keys")}>
-            Manage API keys
+          {operator && (
+            <button className="secondary" onClick={() => setModal("keys")}>
+              Manage API keys
+            </button>
+          )}
+          <button className="secondary" onClick={() => setModal("team")}>
+            Manage team
           </button>
-          {info?.auth_enabled && (
+          {info?.session && (
+            <button className="secondary" onClick={() => setModal("account")}>
+              Your account
+            </button>
+          )}
+          {info?.auth_enabled && operator && (
             <button
               className="secondary"
               onClick={() => {
-                sessionStorage.removeItem("textdock-token");
-                setMessages([]);
-                setInfo(undefined);
-                setModal(undefined);
-                setLocked(true);
+                endSession();
               }}
             >
               Lock this browser
             </button>
           )}
         </Modal>
+      )}
+      {modal === "team" && (
+        <TeamDialog
+          data={workspaces}
+          operator={operator}
+          session={info?.session}
+          close={() => setModal(undefined)}
+        />
+      )}
+      {modal === "account" && info?.session && (
+        <AccountDialog
+          session={info.session}
+          close={() => setModal(undefined)}
+          ended={endSession}
+        />
       )}
     </div>
   );

@@ -11,11 +11,17 @@ export function WorkspacesDialog({
   select,
   close,
   openKeys,
+  openTeam,
+  operator = true,
+  adminProjects = [],
 }: {
   data: Workspaces;
   select: (id: string) => void;
   close: () => void;
   openKeys: () => void;
+  openTeam: () => void;
+  operator?: boolean;
+  adminProjects?: string[];
 }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -43,58 +49,74 @@ export function WorkspacesDialog({
         Separate application traffic into inboxes. Existing integrations use the
         default local inbox.
       </p>
-      <button className="secondary" onClick={openKeys}>
-        Manage API keys
-      </button>
-      <form
-        onSubmit={(e) => {
-          void create(e, true);
-        }}
-      >
-        <label>
-          New project name
-          <input
-            name="name"
-            maxLength={80}
-            required
-            placeholder="e.g. Checkout"
-          />
-        </label>
-        <button className="primary" disabled={busy}>
-          Create project
+      {operator && (
+        <button className="secondary" onClick={openKeys}>
+          Manage API keys
         </button>
-      </form>
-      <h3>Add an inbox</h3>
-      <form
-        onSubmit={(e) => {
-          void create(e, false);
-        }}
-      >
-        <div className="form-row">
+      )}
+      <button className="secondary" onClick={openTeam}>
+        Manage team
+      </button>
+      {operator && (
+        <form
+          onSubmit={(e) => {
+            void create(e, true);
+          }}
+        >
           <label>
-            Project
-            <select name="project_id">
-              {data.projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Inbox name
+            New project name
             <input
               name="name"
               maxLength={80}
               required
-              placeholder="e.g. End-to-end tests"
+              placeholder="e.g. Checkout"
             />
           </label>
-        </div>
-        <button className="secondary" disabled={busy}>
-          Create inbox
-        </button>
-      </form>
+          <button className="primary" disabled={busy}>
+            Create project
+          </button>
+        </form>
+      )}
+      {(operator || adminProjects.length > 0) && (
+        <>
+          <h3>Add an inbox</h3>
+          <form
+            onSubmit={(e) => {
+              void create(e, false);
+            }}
+          >
+            <div className="form-row">
+              <label>
+                Project
+                <select name="project_id">
+                  {data.projects
+                    .filter(
+                      (project) =>
+                        operator || adminProjects.includes(project.id),
+                    )
+                    .map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label>
+                Inbox name
+                <input
+                  name="name"
+                  maxLength={80}
+                  required
+                  placeholder="e.g. End-to-end tests"
+                />
+              </label>
+            </div>
+            <button className="secondary" disabled={busy}>
+              Create inbox
+            </button>
+          </form>
+        </>
+      )}
       {error && (
         <p role="alert" className="error-text">
           {error}
