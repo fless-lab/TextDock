@@ -7,6 +7,7 @@ files together: some contracts reference schemas in `openapi.yaml`.
 |---|---|---|
 | Capture API | Messages, search, metadata and OTP waits | [openapi.yaml](/api/openapi.yaml) |
 | Phone connection | Pairing, scoped sessions and live invalidations | [connect.openapi.yaml](/api/connect.openapi.yaml) |
+| Phone notifications | Web Push subscription and diagnostics | [push.openapi.yaml](/api/push.openapi.yaml) |
 | Workspaces | Projects, inboxes, bulk deletion and export | [workspace.openapi.yaml](/api/workspace.openapi.yaml) |
 | Simulation | Scenarios, events, inbound SMS and callbacks | [simulation.openapi.yaml](/api/simulation.openapi.yaml) |
 | Provider subsets | Vonage and OVH capture shapes | [providers.openapi.yaml](/api/providers.openapi.yaml) |

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock Android device lab
-  version: 0.7.0-beta.1
+  version: 0.7.0-beta.2
   description: Explicit emulator discovery and simulated incoming SMS. Desktop authorization is required when the server token is enabled; device/gateway credentials cannot access these routes.
   license: { name: MIT, identifier: MIT }
 servers:

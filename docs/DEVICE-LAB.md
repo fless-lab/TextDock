@@ -102,6 +102,7 @@ application under test. Physical relay validation remains documented in
 
 ## Remaining device-lab work
 
-USB modem support, broader device/OEM matrices and background Web Push remain
-future work. A successful emulator test is not a claim that those features are
-implemented or that carrier delivery has been verified.
+USB modem support and broader device/OEM matrices remain future work. Optional
+[Web Push](NOTIFICATIONS.md) is implemented, with physical background delivery
+still requiring platform checks. A successful emulator test does not verify
+carrier delivery or physical-device behavior.

@@ -5,8 +5,23 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.7.0-beta.2] - 2026-09-15
+
+### Added
+
 - Opt-in encrypted Web Push for paired phone inboxes, installable phone UI,
   privacy-preserving notifications and scoped subscription lifecycle handling.
+- Persistent VAPID keys, expiring/coalesced notification jobs, delivery diagnostics
+  and explicit permission, test and disable controls.
+- Home-screen icons, a private offline fallback and manual pairing inside an installed app.
+- Web Push API contract and HTTPS/installation guide.
+
+### Scope
+
+- Database schema 8 adds notification keys, subscriptions, jobs and diagnostics.
+- Tests verify encrypted requests and browser worker behavior; physical background
+  delivery and iOS installation still require manual platform validation.
+- This prerelease keeps the public documentation site on stable v0.5.2.
 
 ## [0.7.0-beta.1] - 2026-09-14
 

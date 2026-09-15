@@ -134,7 +134,12 @@ Same-LAN browser access is the zero-service baseline. Automatic LAN address
 suggestions and QR pairing reduce setup in v0.2. HTTPS/tunnels are optional and
 explicit; do not silently upload inbox contents. PWA installation/Web Push need
 secure contexts and platform support, and push usually uses external platform
-services. Notification payloads should omit OTP contents by default.
+services. The optional `internal/push` worker uses persistent SQLite VAPID keys and
+an expiring transactional outbox scoped to each paired device. Payloads contain
+only device/generation identifiers and a generic alert kind, with no SMS, OTP or
+number. The phone worker validates its active binding and expiration before
+displaying fixed text; it caches neither credentials nor messages. See
+[installation and Web Push](NOTIFICATIONS.md) for lifecycle and platform limits.
 
 ## Local to hosted
 

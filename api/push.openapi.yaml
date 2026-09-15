@@ -1,0 +1,108 @@
+openapi: 3.1.0
+info:
+  title: TextDock paired-phone Web Push
+  version: 0.7.0-beta.2
+  description: Opt-in generic notifications for the authenticated paired device. No request may choose another device or inbox scope.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security:
+  - deviceToken: []
+paths:
+  /connect/v1/push/config:
+    get:
+      operationId: getPhonePushConfig
+      summary: Read server enablement and the public VAPID key
+      responses:
+        '200':
+          description: Public notification configuration; never contains private VAPID material
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+                  public_key: { type: string }
+                  privacy: { type: string, const: generic }
+                  service_worker: { type: string, const: /phone-sw.js }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+  /connect/v1/push/state:
+    get:
+      operationId: getPhonePushState
+      summary: Read this session's subscription and latest diagnostic
+      responses:
+        '200':
+          description: Current device state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/State' }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+  /connect/v1/push/subscription:
+    put:
+      operationId: registerPhonePush
+      summary: Register this browser subscription for the authenticated device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [endpoint, keys]
+              properties:
+                endpoint: { type: string, format: uri, maxLength: 2048 }
+                expirationTime: { type: [number, 'null'] }
+                keys:
+                  type: object
+                  required: [auth, p256dh]
+                  additionalProperties: false
+                  properties:
+                    auth: { type: string, description: Base64url 16-byte authentication secret }
+                    p256dh: { type: string, description: Base64url uncompressed P-256 public key }
+      responses:
+        '200':
+          description: Registered with a new subscription generation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/State' }
+        '400': { $ref: './openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './openapi.yaml#/components/responses/Error' }
+    delete:
+      operationId: removePhonePush
+      summary: Remove this device's subscription and pending alerts
+      responses:
+        '204': { description: Removed }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+  /connect/v1/push/test:
+    post:
+      operationId: testPhonePush
+      summary: Queue a generic diagnostic alert for this device
+      responses:
+        '202':
+          description: Alert queued, not proof of display
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, const: queued }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './openapi.yaml#/components/responses/Error' }
+components:
+  securitySchemes:
+    deviceToken: { type: http, scheme: bearer }
+  schemas:
+    State:
+      type: object
+      properties:
+        subscribed: { type: boolean }
+        generation: { type: string }
+        endpoint_host: { type: string }
+        status: { type: string }
+        http_status: { type: integer }
+        detail: { type: string }
+        updated_at: { type: string, format: date-time }
+        queued: { type: boolean }

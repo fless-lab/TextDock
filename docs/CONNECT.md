@@ -20,7 +20,8 @@ removes that browser's copy; **Revoke** on the desktop disables the server-side
 session, closes active streams and clears the phone view.
 
 Pairings are limited to one recipient, optionally a run. Device credentials only
-work on the read-only `/connect/v1/` endpoints. They cannot access the desktop API,
+work on scoped `/connect/v1/` endpoints, with read-only message access and writes
+limited to their own notification preferences. They cannot access the desktop API,
 delete messages or subscribe to another recipient. A shared desktop credential
 still grants full workspace access. See [connection OpenAPI](../api/connect.openapi.yaml).
 
@@ -41,8 +42,10 @@ hostname. Keep the bearer token; HTTPS alone is not authorization.
 
 The phone view includes a web manifest. Use the browser's **Add to Home Screen**
 option where supported; install UX depends on browser and secure context.
-Offline message caching and background push are not enabled. Suspending the page
-may pause updates; resume/reconnect causes a fresh scoped read. Clipboard copy
+Optional generic background alerts and installation diagnostics are described in
+[Phone installation and Web Push](NOTIFICATIONS.md). Messages are not cached
+offline. Suspending the page may pause live updates; resume/reconnect causes a
+fresh scoped read. Clipboard copy
 falls back to a temporary selected field on HTTP; codes always remain selectable.
 
 ## SSE contract

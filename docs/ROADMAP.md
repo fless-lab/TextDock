@@ -103,9 +103,10 @@ carrier conditions. Gateway hardware and real send cost remain optional.
 - Samples for Android SMS Retriever/User Consent and iOS `.oneTimeCode`.
 - Optional HTTPS Web Push with delivery/permission diagnostics.
 
-The first preview implements emulator discovery/injection, persistent history,
-gateway heartbeats and explicit SIM selection. Modem support, push notifications,
-broader platform samples and physical/OEM validation remain follow-up work.
+The previews implement emulator discovery/injection, persistent history,
+gateway heartbeats, explicit SIM selection and optional generic Web Push with
+installation/permission diagnostics. Modem support, broader platform samples and
+physical/OEM/background-delivery validation remain follow-up work.
 
 Acceptance: repeatable emulator and physical-device test matrices, including
 timeout, permission denial and manual-entry fallback. Never promise universal

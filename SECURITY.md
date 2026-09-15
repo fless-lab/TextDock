@@ -13,6 +13,17 @@ server environment variables. Idempotency key fingerprints survive message
 deletion to prevent an old key from creating another carrier send. Uncertain
 dispatches are not automatically retried.
 
+Optional Web Push stores its generated VAPID key pair and browser subscription
+parameters in SQLite. Treat database snapshots as sensitive. Only generic alerts
+are encrypted and sent: never SMS bodies, numbers, OTPs or device credentials.
+The phone worker stores a non-secret active-session binding and expiry, not the
+device token or cached inbox contents. Session revocation cancels queued alerts;
+already accepted platform deliveries cannot be recalled reliably.
+
+Phone credentials may change their own notification preferences. Endpoint hosts
+are restricted to supported HTTPS push services or explicit operator additions;
+these routes do not grant arbitrary HTTP forwarding or access to other inboxes.
+
 Default binding is loopback. Non-loopback binding requires a token with at least
 16 characters. Same-origin browser checks, bounded request bodies and loopback
 Host validation protect the local API boundary. Tokens are not accepted in query

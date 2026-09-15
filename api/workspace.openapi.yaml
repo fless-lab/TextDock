@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock workspace API
-  version: 0.7.0-beta.1
+  version: 0.7.0-beta.2
   description: Local projects, inboxes and bounded bulk operations. Desktop authorization only.
   license: { name: MIT, identifier: MIT }
 servers:
