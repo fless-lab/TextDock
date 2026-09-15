@@ -31,12 +31,12 @@ jobs:
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - run: gradle --no-daemon :app:assembleDebug :app:lintDebug :otp-sample:assembleDebug :otp-sample:lintDebug :otp-sample:testDebugUnitTest :otp-sample:assembleDebugAndroidTest
         working-directory: android
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android-gateway-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android-otp-sample-apk
           path: android/otp-sample/build/outputs/apk/debug/otp-sample-debug.apk
@@ -56,7 +56,7 @@ jobs:
           working-directory: android
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -no-metrics
           script: gradle --no-daemon :otp-sample:connectedDebugAndroidTest
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: android-otp-test-results
