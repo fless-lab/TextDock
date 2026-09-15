@@ -1,10 +1,24 @@
 # Security
 
-TextDock is a local, single-workspace developer tool. Anyone holding the server
+TextDock is a local/self-hosted developer tool. Anyone holding the server
 token has full read/write access. v0.2 phone sessions use separate hashed
 credentials with enforced recipient/run scope, read-only routes, 30-day expiry
 and immediate revocation. Plain desktop query filters are not access controls.
 Hosted multi-tenant deployment requires the later organization-scoped architecture.
+
+The v0.8 preview adds project/inbox machine credentials with separate read,
+capture/edit and delete permissions. API secrets have 256 random bits and are
+stored only as SHA-256 hashes; scope and permissions are immutable. An explicit
+route allowlist denies new operator endpoints by default. IDs, bulk operations,
+exports, OTP waits and live streams are checked against the key's scope. Metadata
+edits need read as well as write because their response includes message content.
+Keys cannot create phone/push/gateway sessions or initiate relay/simulation jobs.
+
+Revoked/expired keys fail authentication; active OTP waits and streams recheck
+their credential. Already admitted requests can finish. Restoring a database
+snapshot also restores its key/revocation state. See [API keys](docs/API-KEYS.md).
+Anonymous loopback mode remains operator access: set the server token to enforce
+isolation on a shared instance. Scoped keys are not a hosted tenant boundary.
 
 The v0.6 preview adds separately scoped gateway credentials and an opt-in real
 SMS relay. Gateway tokens are stored as hashes, cannot authorize the desktop API,

@@ -5,10 +5,23 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.8.0-beta.1] - 2026-09-15
+
+### Added
+
 - Scoped project/inbox API keys with read, capture/edit and delete permissions,
   one-time secret display, expiration and revocation.
 - Default-deny API authorization, scoped exports/OTP/SSE and local provider adapters.
 - Operator key management UI and cross-scope isolation tests.
+
+### Scope
+
+- SQLite schema 9 adds hashed machine credentials and immutable grants.
+- Keys cannot administer workspaces, create phone/gateway credentials, simulate
+  callbacks, inject emulator SMS or request real carrier sends in this preview.
+- Accounts, roles, audit logs, PostgreSQL and hosted organizations remain later work.
+- Anonymous loopback startup is preserved. Shared instances need the server token.
+- This prerelease keeps the public website on stable v0.5.2.
 
 ## [0.7.0-beta.3] - 2026-09-15
 

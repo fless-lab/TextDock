@@ -113,11 +113,17 @@ Acceptance: repeatable emulator and physical-device test matrices, including
 timeout, permission denial and manual-entry fallback. Never promise universal
 SMS Retriever behavior on every emulator image or silent iOS inbox insertion.
 
-## v0.8.0 — Self-hosted teams
+## v0.8.0 — Self-hosted teams (incremental preview)
 
 - Scoped API keys, user sessions, project/inbox roles and audit events.
 - PostgreSQL adapter, durable workers and backup/migration tooling.
 - Scope-aware quotas, retention policies, usage metrics and deployment guide.
+
+The first preview implements project/inbox API keys, independent read/write/delete
+permissions, expiry/revocation, operator management UI and scoped CI capture,
+exports, OTP polling and SSE. User sessions/roles, audit events, PostgreSQL and
+deployment quotas remain follow-up work. Device/relay/simulation administration
+remains operator-only for these machine credentials.
 
 Acceptance: isolation tests cover every API, export, subscription and worker;
 local single-user startup remains one command with SQLite.

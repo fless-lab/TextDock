@@ -1,5 +1,9 @@
 # TextDock : vision et point de départ
 
+**Aperçu v0.8 :** clés API limitées à un projet ou une inbox, permissions de
+lecture/capture/suppression, expiration et révocation. La gestion est intégrée à
+l'interface opérateur. Les comptes, rôles, audits et PostgreSQL restent à venir.
+
 **Aperçu v0.7 :** labo d'émulateurs Android, sélection explicite de la cible ADB,
 injection de SMS simulés et historique. La passerelle Android ajoute le choix
 de la SIM et les rapports de présence/modèle/version. La bêta 2 ajoute une boîte

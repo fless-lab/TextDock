@@ -13,6 +13,7 @@ The complete native-device and hosted-service roadmap is not finished.
 | Phone notifications | Installable inbox and optional generic encrypted Web Push, with diagnostics |
 | Native-device preview | Twilio/Android relay, explicit SIM selection, gateway health and Android emulator injection |
 | Native OTP samples | Android Retriever/User Consent and iOS one-time-code forms with manual fallback |
+| CI access | Project/inbox API keys, independent permissions, expiry and revocation |
 | Testing | OTP detection/wait API, seeded scenarios, simulated incoming SMS and lifecycle history |
 | Webhooks | Signatures, persistent retries, request/response inspection and replay |
 | Integration | JSON API, declared Twilio/Vonage/OVH capture subsets, Node sender SDK |
@@ -40,7 +41,7 @@ Tested USB modems and physical/background-delivery checks remain next steps.
 
 ## Then: v0.8–v0.9 — Teams and hosted service
 
-Scoped API keys and user roles, PostgreSQL, workers and audit logs come before
+Scoped API keys are available in preview. User roles, PostgreSQL, workers and audit logs come before
 organizations, invitations, quotas and managed hosting. The public GitHub Pages
 site is documentation; it is not the future SMS hosting service.
 

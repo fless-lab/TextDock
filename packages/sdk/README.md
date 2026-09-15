@@ -7,7 +7,7 @@ are included. One send interface, with explicit `local`, `twilio`, `vonage`, or
 Install from the TextDock GitHub Release asset:
 
 ```sh
-npm install https://github.com/fless-lab/TextDock/releases/download/v0.7.0-beta.3/textdock-sdk-0.7.0-beta.3.tgz
+npm install https://github.com/fless-lab/TextDock/releases/download/v0.8.0-beta.1/textdock-sdk-0.8.0-beta.1.tgz
 ```
 
 Or install `./packages/sdk` from a source checkout. This package is distributed
@@ -41,6 +41,10 @@ account. Credentials and authorized sender/recipient settings are required for
 real providers. Non-local drivers make actual provider requests.
 
 Or configure directly:
+
+For local capture in CI, use a [scoped API key](../../docs/API-KEYS.md) as the
+client token and select its allowed inbox. Scoped keys do not enable real relay
+or simulation. Keep the operator token on the server.
 
 ```js
 import { createSMS } from '@textdock/sdk';

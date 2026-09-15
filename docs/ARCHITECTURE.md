@@ -143,6 +143,15 @@ displaying fixed text; it caches neither credentials nor messages. See
 
 ## Local to hosted
 
+The first v0.8 increment introduces `internal/access` machine grants. Authentication
+resolves a key before the anonymous-local fallback, then the HTTP layer applies
+an explicit route allowlist and checks every supported inbox/message selector.
+Project grants resolve current inbox membership; inbox grants bind omitted
+selectors to that inbox. SSE subscriptions use a key-specific revocation identity,
+and OTP polling rechecks current credential state. Operator APIs remain unrestricted
+only for the server token or the existing anonymous loopback mode. See
+[scoped API keys](API-KEYS.md) for supported routes and remaining team milestones.
+
 Build a hosted control plane around the same capture engine rather than
 retrofitting tenant isolation into unscoped SQL queries after launch.
 

@@ -7,7 +7,7 @@ android {
         applicationId 'dev.textdock.otpsample'
         minSdk 26
         targetSdk 35
-        versionCode 6
+        versionCode 7
         versionName rootProject.file('../VERSION').text.trim()
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }

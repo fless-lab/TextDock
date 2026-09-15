@@ -57,7 +57,7 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        '204': { description: Revoked, including an already revoked key }
+        '204': { description: 'Revoked, including an already revoked key' }
         '401': { $ref: './openapi.yaml#/components/responses/Error' }
         '403': { $ref: './openapi.yaml#/components/responses/Error' }
         '404': { $ref: './openapi.yaml#/components/responses/Error' }

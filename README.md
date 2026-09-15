@@ -70,7 +70,7 @@ The OTP endpoint returns `{"code":"482193","message_id":"msg_…"}`. The
 application remains responsible for generating, expiring and verifying codes.
 Extraction is a heuristic for 4–8 digit candidates, not an authentication service.
 
-## Available in v0.7.0-beta.3
+## Available in v0.8.0-beta.1
 
 This checkout includes the native-relay and device-lab preview. The public documentation site
 tracks the latest stable release. See [real relay setup and validation](docs/RELAY.md).
@@ -97,6 +97,7 @@ tracks the latest stable release. See [real relay setup and validation](docs/REL
 - Android gateway heartbeats, connection diagnostics and explicit SIM selection.
 - Installable phone inbox, generic encrypted Web Push alerts and permission/connection diagnostics.
 - Native Android/iOS OTP receiving samples, signing-hash helper and manual-entry fallback.
+- Scoped API keys for CI: project/inbox permissions, one-time secrets, expiry and revocation.
 - Binaries and Docker release workflow, automated API and browser checks.
 
 **Not yet implemented:** USB modem connectors, broad physical-device certification and hosted
@@ -148,6 +149,7 @@ for HTTP; remote access needs HTTPS. Details: [mobile and autofill](docs/MOBILE-
 - [Phone pairing and live connections](docs/CONNECT.md)
 - [Phone installation and Web Push](docs/NOTIFICATIONS.md)
 - [Native OTP sample apps](docs/NATIVE-SAMPLES.md)
+- [Scoped API keys](docs/API-KEYS.md)
 - [API and compatibility](docs/API.md) · [OpenAPI](api/openapi.yaml)
 - [Release process](docs/RELEASING.md)
 - [Website and Pages publishing](docs/WEBSITE.md)
