@@ -1425,3 +1425,33 @@ dialog h3 {
     width: max-content;
   }
 }
+.key-permissions {
+  border: 0;
+  padding: 0;
+  margin: 16px 0;
+}
+.key-permissions label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0;
+}
+.key-permissions input {
+  width: auto;
+  flex: none;
+}
+.key-list {
+  list-style: none;
+  padding: 0;
+}
+.key-list li {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.key-list p {
+  margin: 6px 0;
+}
+.key-secret {
+  margin: 20px 0;
+}

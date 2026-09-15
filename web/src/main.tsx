@@ -1,5 +1,6 @@
 import { StrictMode, useEffect, useRef, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
+import { KeysDialog } from "./components/KeysDialog";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -89,6 +90,7 @@ function App() {
     | "scenarios"
     | "relay"
     | "device-lab"
+    | "keys"
   >();
   const [tab, setTab] = useState<"message" | "json" | "events">("message");
   const [busy, setBusy] = useState(false);
@@ -1263,6 +1265,15 @@ function App() {
         <WorkspacesDialog
           data={workspaces}
           select={chooseInbox}
+          openKeys={() => setModal("keys")}
+          close={() => setModal(undefined)}
+        />
+      )}
+      {modal === "keys" && (
+        <KeysDialog
+          data={workspaces}
+          inbox={inbox}
+          authEnabled={!!info?.auth_enabled}
           close={() => setModal(undefined)}
         />
       )}
@@ -1277,6 +1288,7 @@ function App() {
             <button onClick={() => setModal("integrate")}>
               API integration
             </button>
+            <button onClick={() => setModal("keys")}>Manage API keys</button>
             <button
               onClick={() => {
                 setTheme(theme === "dark" ? "light" : "dark");
@@ -1320,6 +1332,9 @@ function App() {
             Configure the server using TEXTDOCK_LISTEN, TEXTDOCK_DB and
             TEXTDOCK_TOKEN. No cloud account is needed.
           </p>
+          <button className="secondary" onClick={() => setModal("keys")}>
+            Manage API keys
+          </button>
           {info?.auth_enabled && (
             <button
               className="secondary"

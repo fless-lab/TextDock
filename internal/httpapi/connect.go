@@ -64,8 +64,8 @@ func (s *Server) claimPair(w http.ResponseWriter, r *http.Request) {
 }
 
 func bearer(r *http.Request) string {
-	if v, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
-		return v
+	if scheme, v, ok := strings.Cut(r.Header.Get("Authorization"), " "); ok && strings.EqualFold(scheme, "Bearer") {
+		return strings.TrimSpace(v)
 	}
 	return ""
 }
@@ -133,7 +133,13 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request, filter events.Fi
 	// Subscribe before rechecking: a revocation between authentication and
 	// subscribing must not leave a stream alive until its expiry.
 	if filter.DeviceID != "" {
-		if _, err := s.Devices.DeviceByHash(r.Context(), connect.Hash(bearer(r))); err != nil {
+		var err error
+		if _, scoped := keyPrincipal(r); scoped {
+			err = s.keyAlive(r)
+		} else {
+			_, err = s.Devices.DeviceByHash(r.Context(), connect.Hash(bearer(r)))
+		}
+		if err != nil {
 			fail(w, 401, "device session ended")
 			return
 		}
@@ -142,12 +148,19 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request, filter events.Fi
 	w.Header().Set("X-Accel-Buffering", "no")
 	controller := http.NewResponseController(w)
 	send := func(event string) error {
+		ended := s.keyAlive(r) != nil
+		if ended {
+			event = "revoked"
+		}
 		_ = controller.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		if _, err := fmt.Fprintf(w, "event: %s\ndata: {}\n\n", event); err != nil {
 			return err
 		}
 		err := controller.Flush()
 		_ = controller.SetWriteDeadline(time.Time{})
+		if ended && err == nil {
+			return errors.New("API key session ended")
+		}
 		return err
 	}
 	if err := send("sync"); err != nil {

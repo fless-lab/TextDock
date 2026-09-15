@@ -1,0 +1,34 @@
+import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test('issue a scoped key once, use it from CI, then revoke it', async ({ page, request }, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Server token').fill('textdock-e2e-token-only');
+  await page.getByRole('button', { name: 'Unlock inbox' }).click();
+  await page.getByRole('button', { name: 'Manage projects' }).click();
+  await page.getByLabel('New project name').fill(`API keys ${testInfo.project.name}`);
+  await page.getByRole('button', { name: 'Create project', exact: true }).click();
+  await expect(page.getByLabel('Inbox', { exact: true })).toHaveValue(/^inbox_/);
+  const inbox = await page.getByLabel('Inbox', { exact: true }).inputValue();
+  await page.getByRole('button', { name: 'Manage projects' }).click();
+  await page.getByRole('button', { name: 'Manage API keys' }).click();
+  const name = `CI ${testInfo.project.name}`;
+  await page.getByLabel('Key name').fill(name);
+  await page.getByRole('button', { name: 'Create API key', exact: true }).click();
+  await expect(page.getByLabel('New API key')).toHaveValue(/^td_key_/);
+  const token = await page.getByLabel('New API key').inputValue();
+  const headers = { Authorization: `Bearer ${token}` };
+  const created = await request.post('/api/v1/messages', { headers, data: { to: '+12025550123', from: 'CI', body: 'Scoped code 482193' } });
+  expect(created.status()).toBe(201);
+  expect((await created.json()).inbox).toBe(inbox);
+  expect((await request.get('/api/v1/messages?inbox=local', { headers })).status()).toBe(403);
+  expect((await request.get('/api/v1/keys', { headers })).status()).toBe(403);
+  expect((await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa']).analyze()).violations).toEqual([]);
+  await page.getByRole('button', { name: 'Close dialog' }).click();
+  await page.getByRole('button', { name: 'Manage projects' }).click();
+  await page.getByRole('button', { name: 'Manage API keys' }).click();
+  await expect(page.getByLabel('New API key')).toHaveCount(0);
+  await page.getByRole('button', { name: `Revoke ${name}`, exact: true }).click();
+  await expect(page.getByRole('button', { name: `Revoke ${name}`, exact: true })).toHaveCount(0);
+  expect((await request.get('/api/v1/messages', { headers })).status()).toBe(401);
+});

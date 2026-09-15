@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -19,27 +18,19 @@ func (s *Server) providerAuthorized(w http.ResponseWriter, r *http.Request, cred
 	if token := bearer(r); token != "" {
 		credential = token
 	}
-	if strings.HasPrefix(credential, "td_device_") || strings.HasPrefix(credential, "td_gateway_") {
-		fail(w, 403, "paired devices cannot send messages")
-		return false
-	}
-	if s.Token != "" {
-		a, b := sha256.Sum256([]byte(credential)), sha256.Sum256([]byte(s.Token))
-		if subtle.ConstantTimeCompare(a[:], b[:]) != 1 {
-			fail(w, 401, "invalid TextDock token")
-			return false
-		}
-	}
-	return true
+	return s.authenticate(w, r, credential)
 }
 
 func (s *Server) providerMessage(w http.ResponseWriter, r *http.Request, in message.Input, source string) (message.Message, bool) {
 	in.Inbox = r.Header.Get("X-TextDock-Inbox")
+	in.RunID = r.Header.Get("X-TextDock-Run-ID")
+	in.ScenarioID = r.Header.Get("X-TextDock-Scenario")
+	if !s.keyCapture(w, r, &in) {
+		return message.Message{}, false
+	}
 	if in.Inbox == "" {
 		in.Inbox = "local"
 	}
-	in.RunID = r.Header.Get("X-TextDock-Run-ID")
-	in.ScenarioID = r.Header.Get("X-TextDock-Scenario")
 	ok, err := s.Workspaces.InboxExists(r.Context(), in.Inbox)
 	if err != nil {
 		internalError(w, err)

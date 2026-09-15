@@ -3,7 +3,6 @@ package httpapi
 import (
 	"context"
 	"crypto/sha256"
-	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -19,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fless-lab/TextDock/internal/access"
 	"github.com/fless-lab/TextDock/internal/application"
 	"github.com/fless-lab/TextDock/internal/connect"
 	"github.com/fless-lab/TextDock/internal/devicelab"
@@ -31,6 +31,7 @@ import (
 )
 
 type Server struct {
+	Keys          access.Repository
 	Store         message.Repository
 	Token         string
 	Version       string
@@ -107,31 +108,23 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) authorize(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// A device token never grants desktop access, including on loopback
-		// instances whose desktop API otherwise permits anonymous requests.
-		if strings.HasPrefix(bearer(r), "td_device_") || strings.HasPrefix(bearer(r), "td_gateway_") {
-			fail(w, 403, "device credentials cannot access the desktop API")
-			return
+		got := bearer(r)
+		if strings.HasPrefix(r.URL.Path, "/2010-04-01/") {
+			if _, password, ok := r.BasicAuth(); ok {
+				got = password
+			}
 		}
-		if s.Token != "" {
-			got := bearer(r)
-			if strings.HasPrefix(r.URL.Path, "/2010-04-01/") {
-				_, password, ok := r.BasicAuth()
-				if ok {
-					got = password
-				}
-			}
-			a, b := sha256.Sum256([]byte(got)), sha256.Sum256([]byte(s.Token))
-			if subtle.ConstantTimeCompare(a[:], b[:]) != 1 {
-				fail(w, 401, "a valid TextDock token is required")
-				return
-			}
+		if !s.authenticate(w, r, got) {
+			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request) {
+	if s.scopedAPI(w, r) || s.keysAPI(w, r) {
+		return
+	}
 	if s.deviceLabAPI(w, r) {
 		return
 	}
@@ -234,6 +227,9 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) capture(w http.ResponseWriter, r *http.Request, in message.Input, source string, twilio bool) {
+	if !s.keyCapture(w, r, &in) {
+		return
+	}
 	if in.Inbox == "" {
 		in.Inbox = "local"
 	}
@@ -374,6 +370,10 @@ func (s *Server) waitOTP(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
 	for {
+		if err := s.keyAlive(r); err != nil {
+			fail(w, 401, "API key session ended")
+			return
+		}
 		items, err := s.Store.List(r.Context(), f)
 		if err != nil {
 			internalError(w, err)

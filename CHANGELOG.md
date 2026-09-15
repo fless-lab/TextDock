@@ -5,6 +5,11 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+- Scoped project/inbox API keys with read, capture/edit and delete permissions,
+  one-time secret display, expiration and revocation.
+- Default-deny API authorization, scoped exports/OTP/SSE and local provider adapters.
+- Operator key management UI and cross-scope isolation tests.
+
 ## [0.7.0-beta.3] - 2026-09-15
 
 ### Added

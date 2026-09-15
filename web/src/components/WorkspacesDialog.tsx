@@ -10,10 +10,12 @@ export function WorkspacesDialog({
   data,
   select,
   close,
+  openKeys,
 }: {
   data: Workspaces;
   select: (id: string) => void;
   close: () => void;
+  openKeys: () => void;
 }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,6 +43,9 @@ export function WorkspacesDialog({
         Separate application traffic into inboxes. Existing integrations use the
         default local inbox.
       </p>
+      <button className="secondary" onClick={openKeys}>
+        Manage API keys
+      </button>
       <form
         onSubmit={(e) => {
           void create(e, true);

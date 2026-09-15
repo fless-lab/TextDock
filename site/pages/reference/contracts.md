@@ -6,6 +6,7 @@ files together: some contracts reference schemas in `openapi.yaml`.
 | Contract | Scope | Download |
 |---|---|---|
 | Capture API | Messages, search, metadata and OTP waits | [openapi.yaml](/api/openapi.yaml) |
+| API keys | Operator-managed scoped machine credentials | [keys.openapi.yaml](/api/keys.openapi.yaml) |
 | Phone connection | Pairing, scoped sessions and live invalidations | [connect.openapi.yaml](/api/connect.openapi.yaml) |
 | Phone notifications | Web Push subscription and diagnostics | [push.openapi.yaml](/api/push.openapi.yaml) |
 | Workspaces | Projects, inboxes, bulk deletion and export | [workspace.openapi.yaml](/api/workspace.openapi.yaml) |
