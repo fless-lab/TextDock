@@ -19,7 +19,7 @@ jobs:
         run: |
           tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ steps.release.outputs.tag }}
       - uses: actions/setup-node@v6
