@@ -1,0 +1,29 @@
+<resources>
+    <string name="title">TextDock OTP sample</string>
+    <string name="intro">Receive a six-digit code through SMS Retriever or one-message User Consent. You can always enter it manually. This sample captures input locally; it does not authenticate you or send an SMS.</string>
+    <string name="code">Verification code</string>
+    <string name="retriever">Start SMS Retriever</string>
+    <string name="consent">Start User Consent</string>
+    <string name="cancel">Cancel listening</string>
+    <string name="use_code">Use code (demo)</string>
+    <string name="copy_sms">Copy Retriever test SMS</string>
+    <string name="manual">Enter a code manually, or start a five-minute listener.</string>
+    <string name="starting">Starting listener… Send the SMS after listening is ready.</string>
+    <string name="listening">Listening for up to five minutes. Manual entry remains available.</string>
+    <string name="unavailable">Google Play services could not start this listener. Enter the code manually.</string>
+    <string name="expired">Listening expired. Start again or enter the code manually.</string>
+    <string name="cancelled">Listening cancelled. Manual entry is still available.</string>
+    <string name="consent_pending">Choose whether to share this one message in the system dialog.</string>
+    <string name="consent_denied">Consent declined or unavailable. Enter the code manually.</string>
+    <string name="received">Code filled from the received message. Review it before continuing.</string>
+    <string name="already_editing">Message received; your existing entry was kept. Review it or enter the code manually.</string>
+    <string name="ambiguous">Message did not contain one unambiguous six-digit code. Enter it manually.</string>
+    <string name="invalid">Enter exactly six ASCII digits.</string>
+    <string name="captured">Six-digit input captured locally. No authentication request was sent.</string>
+    <string name="hash">Installed signing hash: %1$s</string>
+    <string name="hash_unavailable">Signing hash unavailable; User Consent and manual entry still work.</string>
+    <string name="copied">Test SMS copied. This does not send it.</string>
+    <string name="recreated">The previous listener stopped when the activity was recreated. Start again or enter the code manually.</string>
+    <item type="id" name="code_input" />
+    <item type="id" name="status" />
+</resources>

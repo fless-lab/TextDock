@@ -22,3 +22,5 @@ site/playwright-report/
 android/.gradle/
 android/**/build/
 android/local.properties
+examples/ios-otp/*.xcodeproj/
+examples/ios-otp/build/

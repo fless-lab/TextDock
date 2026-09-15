@@ -5,6 +5,10 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+- Native OTP receiving samples: Android SMS Retriever/User Consent and iOS
+  one-time-code input, with manual fallback and explicit local-only confirmation.
+- Android/iOS sample build, unit/UI checks and release artifacts.
+
 ## [0.7.0-beta.2] - 2026-09-15
 
 ### Added

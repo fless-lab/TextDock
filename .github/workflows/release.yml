@@ -130,8 +130,12 @@ jobs:
     needs: checks
     uses: ./.github/workflows/emulator.yml
 
+  ios:
+    needs: checks
+    uses: ./.github/workflows/ios.yml
+
   publish:
-    needs: [binaries, container, sdk, android, emulator]
+    needs: [binaries, container, sdk, android, emulator, ios]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -146,11 +150,17 @@ jobs:
         with:
           name: android-gateway-apk
           path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-otp-sample-apk
+          path: dist
       - name: Checksums and GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mv dist/app-debug.apk "dist/textdock-gateway-${GITHUB_REF_NAME}.apk"
+          mv dist/otp-sample-debug.apk "dist/textdock-otp-sample-${GITHUB_REF_NAME}.apk"
+          mv dist/textdock-otp-ios-simulator.zip "dist/textdock-otp-ios-simulator-${GITHUB_REF_NAME}.zip"
           (cd dist && sha256sum *.tar.gz *.zip *.tgz *.apk > SHA256SUMS)
           flags=()
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags+=(--prerelease); fi

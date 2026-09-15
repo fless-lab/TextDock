@@ -1,0 +1,41 @@
+name: iOS OTP sample
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    branches: [main]
+    paths: ['examples/ios-otp/**', '.github/workflows/ios.yml']
+  pull_request:
+    paths: ['examples/ios-otp/**', '.github/workflows/ios.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  sample:
+    runs-on: macos-15
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: examples/ios-otp
+    steps:
+      - uses: actions/checkout@v6
+      - name: Generate the sample Xcode project
+        run: brew install xcodegen && xcodegen generate
+      - name: Build and test on an available iPhone simulator
+        run: |
+          device=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; devices=json.load(sys.stdin)["devices"]; print(next(d["udid"] for runtime, group in devices.items() if ".iOS-" in runtime for d in group if "iPhone" in d["name"]))')
+          xcodebuild -project TextDockOTP.xcodeproj -scheme TextDockOTP -destination "platform=iOS Simulator,id=$device" -derivedDataPath build -resultBundlePath build/Tests.xcresult CODE_SIGNING_ALLOWED=NO test
+      - name: Package the simulator app
+        run: ditto -c -k --sequesterRsrc --keepParent build/Build/Products/Debug-iphonesimulator/TextDockOTP.app build/textdock-otp-ios-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: textdock-otp-ios-simulator
+          path: examples/ios-otp/build/textdock-otp-ios-simulator.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-otp-test-results
+          path: examples/ios-otp/build/Tests.xcresult
