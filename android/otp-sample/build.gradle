@@ -18,7 +18,9 @@ android {
 }
 
 dependencies {
-    implementation 'com.google.android.gms:play-services-auth-api-phone:18.3.1'
+    // This API version remains compatible with the project's AGP 8.7 lint toolchain.
+    implementation 'com.google.android.gms:play-services-auth-api-phone:18.2.0'
+    implementation 'androidx.core:core:1.15.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test:rules:1.6.1'

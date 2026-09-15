@@ -22,6 +22,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.auth.api.phone.SmsRetriever;
 import com.google.android.gms.common.api.CommonStatusCodes;
@@ -138,8 +139,7 @@ public final class MainActivity extends Activity {
         try {
             IntentFilter filter = new IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION);
             // Google Play services is external; require its signature permission on every broadcast.
-            if (Build.VERSION.SDK_INT >= 33) registerReceiver(receiver, filter, SmsRetriever.SEND_PERMISSION, handler, Context.RECEIVER_EXPORTED);
-            else registerReceiver(receiver, filter, SmsRetriever.SEND_PERMISSION, handler);
+            ContextCompat.registerReceiver(this, receiver, filter, SmsRetriever.SEND_PERMISSION, handler, ContextCompat.RECEIVER_EXPORTED);
             Task<Void> task = consent ? SmsRetriever.getClient(this).startSmsUserConsent(null) : SmsRetriever.getClient(this).startSmsRetriever();
             task.addOnSuccessListener(ignored -> {
                 if (window.active(attempt, SystemClock.elapsedRealtime()) && !awaitingConsent) status.setText(R.string.listening);
