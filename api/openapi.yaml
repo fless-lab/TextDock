@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock capture API
-  version: 0.7.0-beta.2
+  version: 0.7.0-beta.3
   description: Local SMS capture. Bearer authentication is required only when TEXTDOCK_TOKEN is configured. No real SMS is sent.
   license:
     name: MIT

@@ -24,7 +24,8 @@ reporting and fill in maintainer/project contact details before public launch.
 2. Update `VERSION`, `web/package.json`, `site/package.json`, both lockfile root
    versions, `packages/sdk/package.json` and OpenAPI info;
    move Unreleased notes into a dated `CHANGELOG.md` section.
-   Also update Android `versionName` and increment `versionCode` as appropriate.
+   Also update Android gateway `versionName`, both Android `versionCode` values,
+   and the iOS sample's marketing version/build number in `project.yml`.
 3. Validate locally:
 
    ```sh
@@ -69,7 +70,9 @@ must be inspected before retrying a partially completed publication.
    Windows amd64. Archive with license, README and changelog.
 4. Build/push the Linux amd64/arm64 container image to GHCR.
 5. Package the Node SDK as `textdock-sdk-X.Y.Z.tgz`, with source, types and license.
-   Build/lint the Android development companion and include its APK in checksums.
+   Build/lint the Android development companion and receiving sample and include
+   both APKs in checksums. Run Android receiving-form unit/emulator tests and
+   iOS unit/simulator UI tests, then package the iOS simulator application.
    Run the disposable Android emulator integration before publishing device-lab releases.
 6. After artifact/image/SDK success, publish GitHub Release with SHA256SUMS and
     generated notes. A hyphenated version is marked prerelease.

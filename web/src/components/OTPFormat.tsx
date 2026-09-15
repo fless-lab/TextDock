@@ -33,7 +33,14 @@ export function OTPFormat() {
       <p className="modal-description">
         Format an application-generated code. WebOTP needs your application’s
         HTTPS hostname; Android Retriever needs its signing-specific app hash.
-        Formatting alone does not verify device autofill.
+        Formatting alone does not verify device autofill.{" "}
+        <a
+          href="https://github.com/fless-lab/TextDock/blob/main/docs/NATIVE-SAMPLES.md"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Native sample apps and test steps
+        </a>
       </p>
       <form
         onSubmit={(e) => {

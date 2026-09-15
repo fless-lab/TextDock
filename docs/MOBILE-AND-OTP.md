@@ -11,7 +11,8 @@
 | Provider relay | Real-send implementation; device validation pending | If receiver/app/browser supports it | Provider credentials, Internet, cost | v0.6 beta |
 | Android SIM gateway | Real-send implementation; device validation pending | If supported | Gateway Android, app, SIM/plan | v0.6 beta |
 | USB cellular modem | Yes, on destination phone | If supported | Compatible modem, SIM/plan | Planned v0.7 |
-| PWA push notification | No | No | HTTPS, permission, push infrastructure | Planned v0.7 |
+| PWA push notification | No | No | HTTPS, permission, push infrastructure | v0.7 preview |
+| Native OTP receiving samples | Via a separate real or emulator sending path | Platform-dependent; manual fallback | Android Play services or iOS | v0.7 preview |
 
 A captured message cannot be written by a website into iOS or Android's native
 SMS inbox. Reading a message in TextDock does not trigger OS SMS detection.
@@ -79,6 +80,9 @@ real SMS nor bypasses the platform. Serve it on your trusted HTTPS test origin.
 
 ## Native Android application
 
+The [native receiving samples](NATIVE-SAMPLES.md) include a downloadable Android
+APK with both integrations, an installed-signature hash helper and manual entry.
+
 - **SMS Retriever API**: app starts listening through Google Play services;
   received text includes the correct app hash derived from package/signing
   certificate, follows the Retriever size/format requirements, and arrives in
@@ -93,10 +97,13 @@ real SMS nor bypasses the platform. Serve it on your trusted HTTPS test origin.
 
   This can exercise emulator receipt and application UI without a provider. It
   does not prove carrier delivery or identical Retriever behavior on every
-  Google Play services/emulator image. The future connector should select a
-  device explicitly, not broadcast to all attached devices.
+  Google Play services/emulator image. The TextDock device lab selects the
+  emulator explicitly.
 
 ## Native iOS application
+
+The [SwiftUI receiving sample](NATIVE-SAMPLES.md) includes an XcodeGen project,
+local attempt cancellation/expiry and simulator form tests.
 
 Use `.textContentType(.oneTimeCode)` in SwiftUI or `textContentType = .oneTimeCode`
 on a UIKit field. Supported iOS versions can offer the code after a qualifying
@@ -113,7 +120,7 @@ operator**. A separate destination phone receives the actual SMS. This removes
 the SMS API vendor, not the carrier or possible plan charges. Sending to the
 gateway's own number is not a portable test setup and must not be assumed.
 
-The Android gateway will be an installed native app. It needs SMS sending
+The Android gateway is an installed native app. It needs SMS sending
 permissions, must account for Android background execution rules and app-store
 distribution restrictions, and should report submission/delivery separately.
 An iPhone is not a drop-in silent SMS-sending gateway. Never equate acceptance

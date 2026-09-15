@@ -12,6 +12,7 @@ The complete native-device and hosted-service roadmap is not finished.
 | Phone access | QR pairing, scoped read-only sessions, live updates and revocation |
 | Phone notifications | Installable inbox and optional generic encrypted Web Push, with diagnostics |
 | Native-device preview | Twilio/Android relay, explicit SIM selection, gateway health and Android emulator injection |
+| Native OTP samples | Android Retriever/User Consent and iOS one-time-code forms with manual fallback |
 | Testing | OTP detection/wait API, seeded scenarios, simulated incoming SMS and lifecycle history |
 | Webhooks | Signatures, persistent retries, request/response inspection and replay |
 | Integration | JSON API, declared Twilio/Vonage/OVH capture subsets, Node sender SDK |
@@ -34,8 +35,8 @@ have not been verified by the local automated suite.
 ## v0.7 preview — Device lab and phone notifications
 
 Explicit Android emulator selection/injection, gateway health/SIM selection and
-optional HTTPS push notifications are implemented. Tested USB modems, native
-Android/iOS examples and physical/background-delivery checks remain next steps.
+optional HTTPS push notifications and Android/iOS receiving samples are implemented.
+Tested USB modems and physical/background-delivery checks remain next steps.
 
 ## Then: v0.8–v0.9 — Teams and hosted service
 

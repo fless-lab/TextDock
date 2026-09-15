@@ -18,6 +18,7 @@ const routes = new Map(Object.entries({
   'docs/RELAY.md': 'guide/relay.md',
   'docs/DEVICE-LAB.md': 'guide/device-lab.md',
   'docs/NOTIFICATIONS.md': 'guide/notifications.md',
+  'docs/NATIVE-SAMPLES.md': 'guide/native-samples.md',
   'android/README.md': 'reference/android-gateway.md',
   'docs/MOBILE-AND-OTP.md': 'guide/mobile-and-otp.md',
   'docs/API.md': 'reference/api.md',

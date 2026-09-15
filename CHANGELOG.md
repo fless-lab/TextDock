@@ -5,9 +5,22 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.7.0-beta.3] - 2026-09-15
+
+### Added
+
 - Native OTP receiving samples: Android SMS Retriever/User Consent and iOS
   one-time-code input, with manual fallback and explicit local-only confirmation.
 - Android/iOS sample build, unit/UI checks and release artifacts.
+- Installed Android signing-hash display and a copyable Retriever test message.
+- Native sample setup guide, validation matrix and links from the OTP formatter.
+
+### Scope
+
+- Android emulator and iOS simulator form tests do not establish physical SMS
+  receipt, Google Play services retrieval or iOS keyboard suggestion behavior.
+- The iOS archive is a simulator app; physical devices require a signed Xcode build.
+- Database schema stays at 8. Public documentation remains on stable v0.5.2.
 
 ## [0.7.0-beta.2] - 2026-09-15
 

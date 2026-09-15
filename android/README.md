@@ -4,6 +4,10 @@ The companion app polls an explicitly enabled TextDock Android relay and sends
 claimed messages using the selected SIM or the phone's default SMS SIM. It uses only Android platform
 APIs; there is no external Android runtime dependency.
 
+For an application that **receives** an OTP, use the separate
+[Android/iOS OTP samples](../docs/NATIVE-SAMPLES.md). The Android receiving module
+uses Google Play services; it does not send SMS or connect to the gateway API.
+
 ## Setup
 
 1. Run TextDock with `TEXTDOCK_RELAY_DRIVER=android`, a server token and LAN access.

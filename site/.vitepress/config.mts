@@ -48,6 +48,7 @@ export default defineConfig({
         { text: 'Projects, CLI & backups', link: '/guide/workflow' },
         { text: 'Connect a phone', link: '/guide/connect' },
         { text: 'Install & receive notifications', link: '/guide/notifications' },
+        { text: 'Native OTP sample apps', link: '/guide/native-samples' },
         { text: 'Delivery simulation', link: '/guide/simulation' },
         { text: 'Providers & production', link: '/guide/providers' },
         { text: 'Real SMS relay (preview)', link: '/guide/relay' },

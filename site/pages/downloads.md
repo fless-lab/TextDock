@@ -67,10 +67,21 @@ See the [SDK reference](/reference/sdk) for local and production driver setup.
 ## Android gateway preview
 
 The [development APK]({{ASSET_URL}}/textdock-gateway-v{{VERSION}}.apk) connects an
-Android 8+ test phone's default SIM to an explicitly enabled TextDock relay.
+Android 8+ test phone's selected SIM to an explicitly enabled TextDock relay.
 Read the [gateway setup and preview limitations](/reference/android-gateway)
 before using it. It is debug-signed and has not been validated on physical
 hardware by the automated build.
+
+## Native OTP samples
+
+- [Android receiving sample APK]({{ASSET_URL}}/textdock-otp-sample-v{{VERSION}}.apk):
+  SMS Retriever/User Consent and manual input; separate from the sending gateway.
+- [iOS simulator app]({{ASSET_URL}}/textdock-otp-ios-simulator-v{{VERSION}}.zip):
+  one-time-code field and manual form testing on macOS.
+
+See [setup, source builds and physical-device checks](/guide/native-samples).
+The Android APK is debug-signed; a physical iPhone requires a source build with
+your own Xcode signing team. Simulator tests do not verify real SMS suggestions.
 
 ## Build from source
 

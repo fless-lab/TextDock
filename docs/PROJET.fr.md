@@ -5,7 +5,9 @@ injection de SMS simulés et historique. La passerelle Android ajoute le choix
 de la SIM et les rapports de présence/modèle/version. La bêta 2 ajoute une boîte
 mobile installable et des alertes Web Push génériques, optionnelles et chiffrées.
 Les modems USB et les validations physiques multi-SIM/opérateurs et notifications
-en arrière-plan restent à réaliser.
+en arrière-plan restent à réaliser. La bêta 3 ajoute des exemples Android
+Retriever/User Consent et iOS `.oneTimeCode`, avec saisie manuelle et tests de
+formulaire sur émulateur/simulateur.
 
 **v0.6 en bêta :** relais intégré Twilio, passerelle Android avec APK de
 développement, clés d'idempotence, limites d'envoi, expiration et reçus signés.
@@ -28,8 +30,8 @@ service SMS hébergé prévu dans la roadmap.
 
 Le socle local est utilisable : captures, téléphone en lecture seule, scénarios,
 webhooks, CLI et SDK. Le relais SMS et le labo d'émulateurs sont disponibles en
-bêta. Les prochaines étapes comprennent les validations physiques, les exemples
-natifs et les modems, puis les fonctions d'équipe et le SaaS.
+bêta. Les prochaines étapes comprennent les validations physiques et les modems,
+puis les fonctions d'équipe et le SaaS.
 
 ## Les numéros de téléphone
 

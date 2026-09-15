@@ -105,8 +105,9 @@ carrier conditions. Gateway hardware and real send cost remain optional.
 
 The previews implement emulator discovery/injection, persistent history,
 gateway heartbeats, explicit SIM selection and optional generic Web Push with
-installation/permission diagnostics. Modem support, broader platform samples and
-physical/OEM/background-delivery validation remain follow-up work.
+installation/permission diagnostics. The third preview adds Android Retriever/User
+Consent and iOS one-time-code receiving samples with automated form tests. Modem
+support and physical/OEM/background-delivery validation remain follow-up work.
 
 Acceptance: repeatable emulator and physical-device test matrices, including
 timeout, permission denial and manual-entry fallback. Never promise universal
