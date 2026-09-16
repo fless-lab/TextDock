@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/fless-lab/TextDock/internal/audit"
 	"github.com/fless-lab/TextDock/internal/message"
 	"github.com/fless-lab/TextDock/internal/workspace"
 )
@@ -184,6 +185,9 @@ func (s *Server) workspaceAPI(w http.ResponseWriter, r *http.Request) bool {
 		items, next, err := s.page(r, f)
 		if err != nil {
 			internalError(w, err)
+			return true
+		}
+		if !s.recordAudit(w, r, audit.Event{Action: "export.prepared", Outcome: "prepared", InboxID: f.Inbox, ResourceType: "export", Count: int64(len(items))}) {
 			return true
 		}
 		if r.URL.Query().Get("format") != "csv" {

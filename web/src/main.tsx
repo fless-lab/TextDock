@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { KeysDialog } from "./components/KeysDialog";
 import { TeamDialog } from "./components/TeamDialog";
 import { AccountDialog } from "./components/AccountDialog";
+import { AuditDialog } from "./components/AuditDialog";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -97,6 +98,7 @@ function App() {
     | "keys"
     | "team"
     | "account"
+    | "audit"
   >();
   const [tab, setTab] = useState<"message" | "json" | "events">("message");
   const [busy, setBusy] = useState(false);
@@ -107,6 +109,14 @@ function App() {
   );
   const search = useRef<HTMLInputElement>(null);
   const operator = info?.operator !== false;
+  const auditProjects = workspaces.projects.filter(
+    (p) =>
+      operator ||
+      info?.session?.memberships.some(
+        (m) => m.project_id === p.id && m.role === "admin",
+      ),
+  );
+  const canAudit = operator || auditProjects.length > 0;
   const activeProject =
     workspaces.inboxes.find((b) => b.id === inbox)?.project_id || "";
   const role = info?.session?.memberships.find(
@@ -1473,6 +1483,7 @@ function App() {
           select={chooseInbox}
           openKeys={() => setModal("keys")}
           openTeam={() => setModal("team")}
+          openAudit={() => setModal("audit")}
           operator={operator}
           adminProjects={
             info?.session?.memberships
@@ -1514,6 +1525,9 @@ function App() {
               <button onClick={() => setModal("keys")}>Manage API keys</button>
             )}
             <button onClick={() => setModal("team")}>Manage team</button>
+            {canAudit && (
+              <button onClick={() => setModal("audit")}>Audit log</button>
+            )}
             {info?.session && (
               <button onClick={() => setModal("account")}>Your account</button>
             )}
@@ -1568,6 +1582,11 @@ function App() {
           <button className="secondary" onClick={() => setModal("team")}>
             Manage team
           </button>
+          {canAudit && (
+            <button className="secondary" onClick={() => setModal("audit")}>
+              Audit log
+            </button>
+          )}
           {info?.session && (
             <button className="secondary" onClick={() => setModal("account")}>
               Your account
@@ -1598,6 +1617,13 @@ function App() {
           session={info.session}
           close={() => setModal(undefined)}
           ended={endSession}
+        />
+      )}
+      {modal === "audit" && canAudit && (
+        <AuditDialog
+          projects={auditProjects}
+          operator={operator}
+          close={() => setModal(undefined)}
         />
       )}
     </div>

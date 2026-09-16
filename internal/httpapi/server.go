@@ -20,6 +20,7 @@ import (
 
 	"github.com/fless-lab/TextDock/internal/access"
 	"github.com/fless-lab/TextDock/internal/application"
+	"github.com/fless-lab/TextDock/internal/audit"
 	"github.com/fless-lab/TextDock/internal/connect"
 	"github.com/fless-lab/TextDock/internal/devicelab"
 	"github.com/fless-lab/TextDock/internal/events"
@@ -31,6 +32,7 @@ import (
 )
 
 type Server struct {
+	Audit         audit.Repository
 	Users         access.Users
 	Logins        access.LoginGuard
 	Keys          access.Repository
@@ -125,6 +127,9 @@ func (s *Server) authorize(next http.Handler) http.Handler {
 }
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request) {
+	if s.auditAPI(w, r) {
+		return
+	}
 	if s.teamAPI(w, r) || s.accountAPI(w, r) || s.userAPI(w, r) {
 		return
 	}

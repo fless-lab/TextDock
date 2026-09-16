@@ -123,6 +123,7 @@ func run() error {
 	labConfig, err := devicelab.FromEnv()
 	api.Keys = store
 	api.Users = store
+	api.Audit = store
 	if err != nil {
 		return err
 	}

@@ -12,6 +12,7 @@ export function WorkspacesDialog({
   close,
   openKeys,
   openTeam,
+  openAudit,
   operator = true,
   adminProjects = [],
 }: {
@@ -20,6 +21,7 @@ export function WorkspacesDialog({
   close: () => void;
   openKeys: () => void;
   openTeam: () => void;
+  openAudit: () => void;
   operator?: boolean;
   adminProjects?: string[];
 }) {
@@ -57,6 +59,11 @@ export function WorkspacesDialog({
       <button className="secondary" onClick={openTeam}>
         Manage team
       </button>
+      {(operator || adminProjects.length > 0) && (
+        <button className="secondary" onClick={openAudit}>
+          Audit log
+        </button>
+      )}
       {operator && (
         <form
           onSubmit={(e) => {

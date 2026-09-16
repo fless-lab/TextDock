@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/fless-lab/TextDock/internal/audit"
 	"github.com/fless-lab/TextDock/internal/message"
 	"github.com/fless-lab/TextDock/internal/workspace"
 )
@@ -91,10 +92,16 @@ func (s *SQLite) CreateProject(ctx context.Context, p workspace.Project, in work
 	if _, err := tx.ExecContext(ctx, `INSERT INTO inboxes VALUES (?, ?, ?)`, in.ID, p.ID, in.Name); err != nil {
 		return err
 	}
+	if err := insertAudit(ctx, tx, audit.Event{Action: "project.created", ProjectID: p.ID, ResourceType: "project", ResourceID: p.ID, Count: 1}); err != nil {
+		return err
+	}
+	if err := insertAudit(ctx, tx, audit.Event{Action: "inbox.created", InboxID: in.ID, ResourceType: "inbox", ResourceID: in.ID, Count: 1}); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 func (s *SQLite) CreateInbox(ctx context.Context, in workspace.Inbox) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO inboxes VALUES (?, ?, ?)`, in.ID, in.ProjectID, in.Name)
+	_, err := s.auditedExec(ctx, audit.Event{Action: "inbox.created", InboxID: in.ID, ResourceType: "inbox", ResourceID: in.ID}, `INSERT INTO inboxes VALUES (?, ?, ?)`, in.ID, in.ProjectID, in.Name)
 	return err
 }
 func (s *SQLite) InboxExists(ctx context.Context, id string) (bool, error) {
@@ -130,23 +137,52 @@ func (s *SQLite) Update(ctx context.Context, id string, patch message.Update) (m
 	if _, err := tx.ExecContext(ctx, `UPDATE messages SET payload = ?, favorite = ? WHERE id = ?`, string(payload), m.Favorite, id); err != nil {
 		return m, err
 	}
+	if err := insertAudit(ctx, tx, audit.Event{Action: "message.updated", InboxID: m.Inbox, ResourceType: "message", ResourceID: m.ID, Count: 1}); err != nil {
+		return m, err
+	}
 	return m, tx.Commit()
 }
 
 func (s *SQLite) Purge(ctx context.Context, inbox string) (int64, error) {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE inbox = ?`, inbox)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+	return s.auditedExec(ctx, audit.Event{Action: "messages.purged", InboxID: inbox, ResourceType: "inbox", ResourceID: inbox}, `DELETE FROM messages WHERE inbox=?`, inbox)
 }
 
 func (s *SQLite) Prune(ctx context.Context, before time.Time) (int64, error) {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE created_at < ?`, before.UTC().Format(timestamp))
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	defer tx.Rollback()
+	rows, err := tx.QueryContext(ctx, `SELECT inbox,count(*) FROM messages WHERE created_at<? GROUP BY inbox`, before.UTC().Format(timestamp))
+	if err != nil {
+		return 0, err
+	}
+	events := []audit.Event{}
+	var count int64
+	for rows.Next() {
+		e := audit.Event{Action: "messages.pruned", ResourceType: "inbox"}
+		if err := rows.Scan(&e.InboxID, &e.Count); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		e.ResourceID = e.InboxID
+		count += e.Count
+		events = append(events, e)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return 0, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM messages WHERE created_at<?`, before.UTC().Format(timestamp)); err != nil {
+		return 0, err
+	}
+	for _, e := range events {
+		if err := insertAudit(ctx, tx, e); err != nil {
+			return 0, err
+		}
+	}
+	return count, tx.Commit()
 }
 
 func (s *SQLite) Backup(ctx context.Context, path string) error {

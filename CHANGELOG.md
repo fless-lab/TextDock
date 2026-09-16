@@ -5,6 +5,12 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+- Transactional audit history for accounts, sessions, memberships, API keys,
+  projects/inboxes, message mutations and scenario configuration.
+- Metadata-only failed password checks and prepared-export events.
+- Operator/project-admin audit filters, keyset pagination and page downloads.
+- Audit failure rollback, privacy, persistence and scope-isolation tests.
+
 ## [0.8.0-beta.2] - 2026-09-15
 
 ### Added

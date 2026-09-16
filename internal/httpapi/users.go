@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/fless-lab/TextDock/internal/access"
+	"github.com/fless-lab/TextDock/internal/audit"
 	"github.com/fless-lab/TextDock/internal/events"
 	"github.com/fless-lab/TextDock/internal/workspace"
 )
@@ -60,6 +61,10 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	verified := access.VerifyPassword(in.Password, hash)
 	if err != nil || u.Disabled || !verified {
+		auditActor(r, "anonymous", "")
+		if !s.recordAudit(w, r, audit.Event{Action: "login.failed", Outcome: "denied", ResourceType: "login"}) {
+			return
+		}
 		fail(w, 401, access.ErrLogin.Error())
 		return
 	}
@@ -69,6 +74,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := "td_user_" + base64.RawURLEncoding.EncodeToString(secret)
+	auditActor(r, "user", u.ID)
 	session := access.UserSession{ID: "session_" + rand.Text(), User: u, CreatedAt: time.Now().UTC(), ExpiresAt: time.Now().UTC().Add(12 * time.Hour)}
 	if err := s.Users.CreateUserSession(r.Context(), session, access.Hash(token), hash); err != nil {
 		if errors.Is(err, access.ErrLogin) {
@@ -106,6 +112,7 @@ func (s *Server) userAuthenticated(w http.ResponseWriter, r *http.Request, crede
 	}
 	p := principal{Key: access.Key{ID: session.ID, ExpiresAt: session.ExpiresAt}, Hash: hash, Session: &session}
 	*r = *r.WithContext(context.WithValue(r.Context(), principalKey{}, p))
+	auditActor(r, "user", session.User.ID)
 	return true
 }
 

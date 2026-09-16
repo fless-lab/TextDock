@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/fless-lab/TextDock/internal/access"
+	"github.com/fless-lab/TextDock/internal/audit"
 	"time"
 )
 
@@ -17,11 +18,10 @@ func (s *SQLite) migrateUsers() error {
 	return err
 }
 func (s *SQLite) CreateUser(ctx context.Context, u access.User, passwordHash string) error {
-	result, err := s.db.ExecContext(ctx, `INSERT INTO users(id,username,name,password_hash,created_at) VALUES(?,?,?,?,?) ON CONFLICT(username) DO NOTHING`, u.ID, u.Username, u.Name, passwordHash, u.CreatedAt.UnixMilli())
+	n, err := s.auditedExec(ctx, audit.Event{Action: "user.created", ResourceType: "user", ResourceID: u.ID}, `INSERT INTO users(id,username,name,password_hash,created_at) VALUES(?,?,?,?,?) ON CONFLICT(username) DO NOTHING`, u.ID, u.Username, u.Name, passwordHash, u.CreatedAt.UnixMilli())
 	if err != nil {
 		return err
 	}
-	n, err := result.RowsAffected()
 	if err == nil && n == 0 {
 		return access.ErrUsername
 	}
@@ -57,11 +57,10 @@ func (s *SQLite) UserCredential(ctx context.Context, username string) (access.Us
 	return u, hash, err
 }
 func (s *SQLite) CreateUserSession(ctx context.Context, session access.UserSession, hash, passwordHash string) error {
-	result, err := s.db.ExecContext(ctx, `INSERT INTO user_sessions(id,user_id,token_hash,created_at,expires_at) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=? AND disabled=0)`, session.ID, session.User.ID, hash, session.CreatedAt.UnixMilli(), session.ExpiresAt.UnixMilli(), session.User.ID, passwordHash)
+	n, err := s.auditedExec(ctx, audit.Event{Action: "session.created", ResourceType: "session", ResourceID: session.ID}, `INSERT INTO user_sessions(id,user_id,token_hash,created_at,expires_at) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=? AND disabled=0)`, session.ID, session.User.ID, hash, session.CreatedAt.UnixMilli(), session.ExpiresAt.UnixMilli(), session.User.ID, passwordHash)
 	if err != nil {
 		return err
 	}
-	n, err := result.RowsAffected()
 	if err == nil && n == 0 {
 		return access.ErrLogin
 	}
@@ -115,12 +114,29 @@ func (s *SQLite) UserSessions(ctx context.Context, user string) ([]access.Sessio
 	return out, rows.Err()
 }
 func (s *SQLite) RevokeUserSession(ctx context.Context, user, id string) (bool, error) {
-	r, err := s.db.ExecContext(ctx, `UPDATE user_sessions SET revoked_at=coalesce(revoked_at,?) WHERE id=? AND user_id=?`, time.Now().UnixMilli(), id, user)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return false, err
 	}
-	n, err := r.RowsAffected()
-	return n > 0, err
+	defer tx.Rollback()
+	var revoked sql.NullInt64
+	err = tx.QueryRowContext(ctx, `SELECT revoked_at FROM user_sessions WHERE id=? AND user_id=?`, id, user).Scan(&revoked)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if revoked.Valid {
+		return true, nil
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE user_sessions SET revoked_at=? WHERE id=?`, time.Now().UnixMilli(), id); err != nil {
+		return false, err
+	}
+	if err := insertAudit(ctx, tx, audit.Event{Action: "session.revoked", ResourceType: "session", ResourceID: id, Count: 1}); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
 }
 
 // Mutations and session revocation commit together. Returned IDs allow the HTTP
@@ -147,12 +163,20 @@ func revokeSessions(ctx context.Context, tx *sql.Tx, user string) ([]string, err
 	_, err = tx.ExecContext(ctx, `UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL`, time.Now().UnixMilli(), user)
 	return ids, err
 }
-func (s *SQLite) changeUser(ctx context.Context, id, statement string, args ...any) ([]string, error) {
+func (s *SQLite) changeUser(ctx context.Context, id string, e audit.Event, statement string, args ...any) ([]string, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+	if e.Action == "membership.removed" {
+		if err := tx.QueryRowContext(ctx, `SELECT role FROM memberships WHERE project_id=? AND user_id=?`, e.ProjectID, id).Scan(&e.RoleBefore); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, access.ErrUser
+			}
+			return nil, err
+		}
+	}
 	result, err := tx.ExecContext(ctx, statement, args...)
 	if err != nil {
 		return nil, err
@@ -168,13 +192,21 @@ func (s *SQLite) changeUser(ctx context.Context, id, statement string, args ...a
 	if err != nil {
 		return nil, err
 	}
+	e.Count = 1
+	if err := insertAudit(ctx, tx, e); err != nil {
+		return nil, err
+	}
 	return ids, tx.Commit()
 }
 func (s *SQLite) SetUserDisabled(ctx context.Context, id string, disabled bool) ([]string, error) {
-	return s.changeUser(ctx, id, `UPDATE users SET disabled=? WHERE id=?`, disabled, id)
+	action := "user.enabled"
+	if disabled {
+		action = "user.disabled"
+	}
+	return s.changeUser(ctx, id, audit.Event{Action: action, ResourceType: "user", ResourceID: id}, `UPDATE users SET disabled=? WHERE id=?`, disabled, id)
 }
 func (s *SQLite) SetUserPassword(ctx context.Context, id, hash, expected string) ([]string, error) {
-	return s.changeUser(ctx, id, `UPDATE users SET password_hash=? WHERE id=? AND (?='' OR password_hash=?)`, hash, id, expected, expected)
+	return s.changeUser(ctx, id, audit.Event{Action: "user.password_changed", ResourceType: "user", ResourceID: id}, `UPDATE users SET password_hash=? WHERE id=? AND (?='' OR password_hash=?)`, hash, id, expected, expected)
 }
 func (s *SQLite) ProjectMembers(ctx context.Context, project string) ([]access.Membership, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT m.project_id,u.id,u.username,u.name,m.role FROM memberships m JOIN users u ON u.id=m.user_id WHERE project_id=? ORDER BY u.username`, project)
@@ -209,6 +241,11 @@ func (s *SQLite) SetMembership(ctx context.Context, project, username, role stri
 	if err != nil {
 		return nil, err
 	}
+	var previous string
+	err = tx.QueryRowContext(ctx, `SELECT role FROM memberships WHERE project_id=? AND user_id=?`, project, id).Scan(&previous)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO memberships VALUES(?,?,?) ON CONFLICT(project_id,user_id) DO UPDATE SET role=excluded.role`, project, id, role)
 	if err != nil {
 		return nil, err
@@ -217,8 +254,11 @@ func (s *SQLite) SetMembership(ctx context.Context, project, username, role stri
 	if err != nil {
 		return nil, err
 	}
+	if err := insertAudit(ctx, tx, audit.Event{Action: "membership.assigned", ProjectID: project, ResourceType: "membership", ResourceID: id, Count: 1, RoleBefore: previous, RoleAfter: role}); err != nil {
+		return nil, err
+	}
 	return ids, tx.Commit()
 }
 func (s *SQLite) RemoveMembership(ctx context.Context, project, user string) ([]string, error) {
-	return s.changeUser(ctx, user, `DELETE FROM memberships WHERE project_id=? AND user_id=?`, project, user)
+	return s.changeUser(ctx, user, audit.Event{Action: "membership.removed", ProjectID: project, ResourceType: "membership", ResourceID: user}, `DELETE FROM memberships WHERE project_id=? AND user_id=?`, project, user)
 }

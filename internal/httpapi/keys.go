@@ -67,6 +67,7 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, credential
 			return false
 		}
 		*r = *r.WithContext(context.WithValue(r.Context(), principalKey{}, principal{Key: k, Hash: hash}))
+		auditActor(r, "api_key", k.ID)
 		return true
 	}
 	if strings.HasPrefix(credential, "td_user_") {
@@ -78,6 +79,11 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, credential
 			fail(w, 401, "a valid TextDock token is required")
 			return false
 		}
+	}
+	if s.Token == "" {
+		auditActor(r, "local_operator", "")
+	} else {
+		auditActor(r, "operator", "")
 	}
 	return true
 }

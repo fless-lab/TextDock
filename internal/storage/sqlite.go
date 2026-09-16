@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync/atomic"
 
+	"github.com/fless-lab/TextDock/internal/audit"
 	"github.com/fless-lab/TextDock/internal/message"
 	"github.com/fless-lab/TextDock/internal/simulation"
 
@@ -23,7 +24,7 @@ type SQLite struct {
 	pushEnabled atomic.Bool
 }
 
-const schemaVersion = 10
+const schemaVersion = 11
 
 func Open(path string) (*SQLite, error) {
 	// database/sql can discard a connection after a cancelled transaction.
@@ -124,6 +125,10 @@ func Open(path string) (*SQLite, error) {
 		cleanup()
 		return nil, err
 	}
+	if err := s.migrateAudit(); err != nil {
+		cleanup()
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -172,12 +177,26 @@ func (s *SQLite) List(ctx context.Context, f message.Filter) ([]message.Message,
 }
 
 func (s *SQLite) Delete(ctx context.Context, id string) (bool, error) {
-	r, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE id = ?`, id)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return false, err
 	}
-	n, err := r.RowsAffected()
-	return n > 0, err
+	defer tx.Rollback()
+	var inbox string
+	err = tx.QueryRowContext(ctx, `SELECT inbox FROM messages WHERE id=?`, id).Scan(&inbox)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM messages WHERE id=?`, id); err != nil {
+		return false, err
+	}
+	if err := insertAudit(ctx, tx, audit.Event{Action: "message.deleted", InboxID: inbox, ResourceType: "message", ResourceID: id, Count: 1}); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
 }
 
 func (s *SQLite) Get(ctx context.Context, id string) (message.Message, error) {

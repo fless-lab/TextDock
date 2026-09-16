@@ -1,0 +1,33 @@
+import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test('inspect and filter committed audit metadata after deleting a message', async ({ page, request }, testInfo) => {
+  const headers = { Authorization: 'Bearer textdock-e2e-token-only' };
+  const created = await request.post('/api/v1/projects', { headers, data: { name: `Audit ${testInfo.project.name}` } });
+  expect(created.status()).toBe(201);
+  const { project, inbox } = await created.json();
+  const response = await request.post('/api/v1/messages', { headers, data: { inbox: inbox.id, to: '+12025550123', from: 'AuditPrivateSender', body: 'AuditPrivateBody 482193', run_id: 'AuditPrivateRun' } });
+  expect(response.status()).toBe(201);
+  const message = await response.json();
+  expect((await request.delete(`/api/v1/messages/${message.id}`, { headers })).status()).toBe(204);
+  await page.goto('/');
+  await page.getByLabel('Server token').fill('textdock-e2e-token-only');
+  await page.getByRole('button', { name: 'Unlock inbox' }).click();
+  await page.getByRole('button', { name: 'Manage projects' }).click();
+  await page.getByRole('button', { name: 'Audit log', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Audit project', exact: true }).selectOption(project.id);
+  await expect(page.locator('[data-audit-action="message.deleted"]')).toContainText(message.id);
+  await page.getByRole('combobox', { name: 'Audit action', exact: true }).selectOption('message.created');
+  await expect(page.locator('.audit-list > li')).toHaveCount(1);
+  await expect(page.locator('.audit-list')).toContainText(message.id);
+  await expect(page.locator('.audit-list')).toContainText('operator');
+  await expect(page.locator('.audit-list')).not.toContainText('AuditPrivate');
+  await expect(page.locator('.audit-list')).not.toContainText('482193');
+  await expect(page.locator('.audit-list')).not.toContainText('+12025550123');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download audit page' }).click();
+  expect((await download).suggestedFilename()).toBe('textdock-audit.json');
+  expect((await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa']).analyze()).violations).toEqual([]);
+  await page.getByRole('combobox', { name: 'Outcome', exact: true }).selectOption('denied');
+  await expect(page.getByText('No matching audit events.', { exact: true })).toBeVisible();
+});

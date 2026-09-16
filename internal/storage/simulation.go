@@ -8,6 +8,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/fless-lab/TextDock/internal/audit"
 	"github.com/fless-lab/TextDock/internal/message"
 	"github.com/fless-lab/TextDock/internal/simulation"
 )
@@ -49,7 +50,7 @@ func (s *SQLite) PutScenario(ctx context.Context, scenario simulation.Scenario) 
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO scenarios VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET inbox=excluded.inbox, config=excluded.config`, scenario.ID, scenario.Inbox, string(data))
+	_, err = s.auditedExec(ctx, audit.Event{Action: "scenario.saved", InboxID: scenario.Inbox, ResourceType: "scenario", ResourceID: scenario.ID}, `INSERT INTO scenarios VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET inbox=excluded.inbox, config=excluded.config`, scenario.ID, scenario.Inbox, string(data))
 	return err
 }
 func (s *SQLite) GetScenario(ctx context.Context, id string) (simulation.Scenario, error) {
@@ -82,8 +83,26 @@ func (s *SQLite) ListScenarios(ctx context.Context, inbox string) ([]simulation.
 	return out, rows.Err()
 }
 func (s *SQLite) DeleteScenario(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM scenarios WHERE id=?`, id)
-	return err
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var inbox string
+	err = tx.QueryRowContext(ctx, `SELECT inbox FROM scenarios WHERE id=?`, id).Scan(&inbox)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM scenarios WHERE id=?`, id); err != nil {
+		return err
+	}
+	if err := insertAudit(ctx, tx, audit.Event{Action: "scenario.deleted", InboxID: inbox, ResourceType: "scenario", ResourceID: id, Count: 1}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func insertMessage(ctx context.Context, tx *sql.Tx, m message.Message, notify bool) (int64, error) {
@@ -107,6 +126,9 @@ func insertMessage(ctx context.Context, tx *sql.Tx, m message.Message, notify bo
 		if err := enqueuePush(ctx, tx, m); err != nil {
 			return 0, err
 		}
+	}
+	if err := insertAudit(ctx, tx, audit.Event{Action: "message.created", InboxID: m.Inbox, ResourceType: "message", ResourceID: m.ID, Count: 1}); err != nil {
+		return 0, err
 	}
 	return id, nil
 }
