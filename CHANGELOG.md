@@ -5,11 +5,24 @@ v1.0, minor releases may evolve contracts with explicit migration notes.
 
 ## [Unreleased]
 
+## [0.8.0-beta.3] - 2026-09-16
+
+### Added
+
 - Transactional audit history for accounts, sessions, memberships, API keys,
   projects/inboxes, message mutations and scenario configuration.
 - Metadata-only failed password checks and prepared-export events.
 - Operator/project-admin audit filters, keyset pagination and page downloads.
 - Audit failure rollback, privacy, persistence and scope-isolation tests.
+
+### Scope
+
+- SQLite schema 11 adds retained audit metadata without cascading SMS deletion.
+- Audit insertion failure rolls back the covered database mutation.
+- No audit deletion API, automatic audit retention or tamper-evident signatures.
+- Message delivery outcomes remain in the existing relay/lab/message histories;
+  the audit journal is not a comprehensive HTTP/worker/device access log.
+- Public documentation stays on stable v0.5.2 for this prerelease.
 
 ## [0.8.0-beta.2] - 2026-09-15
 

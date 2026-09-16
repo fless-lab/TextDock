@@ -160,6 +160,14 @@ Membership/password/account changes revoke user sessions in the same transaction
 then close their live subscriptions. The browser rejects stale results across
 identity/inbox changes. See [users and roles](USERS.md).
 
+`internal/audit` provides a closed metadata event type and credential-derived
+actor context. SQLite writes covered resource changes and audit rows in the same
+transaction. Audit rows use no cascading resource foreign keys, so SMS retention
+does not erase administrative history. Project/inbox indexes support descending
+ID pagination. Failed password checks and prepared exports use separate bounded
+appends; neither is represented as a successful resource mutation. See
+[audit history](AUDIT.md) for exact coverage and durability boundaries.
+
 Build a hosted control plane around the same capture engine rather than
 retrofitting tenant isolation into unscoped SQL queries after launch.
 

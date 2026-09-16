@@ -35,6 +35,15 @@ their active streams. Requests already admitted may finish. Old browser response
 are ignored after identity/inbox switches. Backups can restore earlier password,
 membership and session state. See [user sessions](docs/USERS.md).
 
+The audit journal records a closed vocabulary of identifiers, actors, actions,
+outcomes and bounded role/permission/count metadata. It never copies credentials,
+password hashes, SMS/OTP contents, phone numbers, tag values or arbitrary request
+details. Covered mutations and their audit records commit together or roll back.
+Operators can read all history; project admins can read only their current admin
+projects. Viewers, members and machine keys cannot read the journal. SMS deletion
+does not cascade into audit history. Database access/restore can alter that
+history; it is not a signed or tamper-evident ledger. See [audit scope](docs/AUDIT.md).
+
 The v0.6 preview adds separately scoped gateway credentials and an opt-in real
 SMS relay. Gateway tokens are stored as hashes, cannot authorize the desktop API,
 and can acknowledge only their own leased jobs. Provider credentials remain in

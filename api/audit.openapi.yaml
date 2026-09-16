@@ -1,0 +1,104 @@
+openapi: 3.1.0
+info:
+  title: TextDock audit history
+  version: 0.8.0-beta.3
+  description: Metadata-only committed mutations and selected authentication/export outcomes. Operator-wide or current project-admin access; machine keys cannot read the journal.
+  license: { name: MIT, identifier: MIT }
+servers:
+  - url: http://localhost:18257
+security:
+  - operatorToken: []
+  - userSession: []
+paths:
+  /api/v1/audit:
+    get:
+      operationId: listAuditEvents
+      summary: Read authorized audit metadata with keyset pagination
+      parameters:
+        - in: query
+          name: project_id
+          description: Required for project administrators; operator omission includes instance events
+          schema: { type: string, maxLength: 128 }
+        - in: query
+          name: inbox_id
+          description: Must belong to the selected project
+          schema: { type: string, maxLength: 128 }
+        - in: query
+          name: actor_id
+          schema: { type: string, maxLength: 128 }
+        - in: query
+          name: action
+          schema: { $ref: '#/components/schemas/Action' }
+        - in: query
+          name: outcome
+          schema: { $ref: '#/components/schemas/Outcome' }
+        - in: query
+          name: since
+          schema: { type: string, format: date-time }
+        - in: query
+          name: before
+          schema: { type: integer, format: int64, minimum: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: Events ordered by descending ID; no credentials or SMS content
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events, next_cursor, actions]
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/Event' }
+                  next_cursor: { type: integer, format: int64, minimum: 0, description: Next before value; zero means no older page }
+                  actions:
+                    type: array
+                    items: { $ref: '#/components/schemas/Action' }
+        '400': { $ref: './openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './openapi.yaml#/components/responses/Error' }
+        '503': { $ref: './openapi.yaml#/components/responses/Error' }
+components:
+  securitySchemes:
+    operatorToken: { type: http, scheme: bearer }
+    userSession: { type: http, scheme: bearer, description: Current admin role required in the explicitly selected project }
+  schemas:
+    Action:
+      type: string
+      enum: [api_key.created, api_key.revoked, export.prepared, inbox.created, login.failed, membership.assigned, membership.removed, message.created, message.deleted, message.updated, messages.pruned, messages.purged, project.created, scenario.deleted, scenario.saved, session.created, session.revoked, user.created, user.disabled, user.enabled, user.password_changed]
+    Outcome:
+      type: string
+      enum: [committed, denied, prepared]
+    Role:
+      type: string
+      enum: [viewer, member, admin]
+    Event:
+      type: object
+      additionalProperties: false
+      required: [id, at, actor, action, outcome, resource_type, count]
+      properties:
+        id: { type: integer, format: int64 }
+        at: { type: string, format: date-time }
+        actor:
+          type: object
+          additionalProperties: false
+          required: [kind]
+          properties:
+            kind: { type: string, enum: [operator, local_operator, user, api_key, system, anonymous] }
+            id: { type: string, maxLength: 128, description: Stored identity ID; never a token or submitted username }
+        action: { $ref: '#/components/schemas/Action' }
+        outcome: { $ref: '#/components/schemas/Outcome' }
+        project_id: { type: string, maxLength: 128 }
+        inbox_id: { type: string, maxLength: 128 }
+        resource_type: { type: string, enum: [project, inbox, message, user, session, api_key, membership, login, export, scenario] }
+        resource_id: { type: string, maxLength: 128 }
+        count: { type: integer, format: int64, minimum: 0 }
+        role_before: { $ref: '#/components/schemas/Role' }
+        role_after: { $ref: '#/components/schemas/Role' }
+        permissions:
+          type: array
+          maxItems: 3
+          items: { type: string, enum: ['messages:read', 'messages:write', 'messages:delete'] }

@@ -39,6 +39,7 @@ token to be configured. Use the existing trusted HTTPS setup for remote sign-in.
 | Create an inbox in that project | No | No | Yes |
 | View project members | Yes | Yes | Yes |
 | Assign/change/remove project memberships | No | No | Yes |
+| Read the project's audit history | No | No | Yes |
 | Create projects or accounts, reset other passwords | No | No | No |
 | Manage machine keys, gateways, phones or emulator targets | No | No | No |
 | Start real relay, simulation or webhook replay | No | No | No |
@@ -128,6 +129,9 @@ SQLite schema 10 adds users, memberships and sessions. Database backups include
 password hashes, grants and session revocation state. Restoring a snapshot can
 restore earlier passwords, memberships and sessions; review them after recovery.
 
+The [audit journal](AUDIT.md) records account, session and role changes with
+operator/project-admin visibility and no password material.
+
 This release does not implement email invitations, self-registration, OIDC/MFA,
-audit history, PostgreSQL, hosted organizations or billing. Physical SMS/autofill
+PostgreSQL, hosted organizations or billing. Physical SMS/autofill
 validation remains separate from user authorization tests.

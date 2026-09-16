@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TextDock users and project roles
-  version: 0.8.0-beta.2
+  version: 0.8.0-beta.3
   description: Local operator-created accounts and 12-hour user sessions. Project roles do not grant operator access. Account administration requires a configured server token.
   license: { name: MIT, identifier: MIT }
 servers:

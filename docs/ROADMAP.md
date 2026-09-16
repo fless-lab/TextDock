@@ -123,7 +123,9 @@ The first preview implements project/inbox API keys, independent read/write/dele
 permissions, expiry/revocation, operator management UI and scoped CI capture,
 exports, OTP polling and SSE. The second preview adds operator-created accounts,
 Argon2id passwords, revocable sessions and project viewer/member/admin roles.
-Audit events, PostgreSQL and deployment quotas remain follow-up work.
+The third preview adds transactional audit history, project-admin queries and
+privacy/rollback tests. PostgreSQL, deployment quotas, audit retention and broader
+worker/device audit coverage remain follow-up work.
 Device/relay/simulation administration remains operator-only for these credentials.
 
 Acceptance: isolation tests cover every API, export, subscription and worker;

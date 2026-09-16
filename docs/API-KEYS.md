@@ -5,7 +5,8 @@ receiving the TextDock operator token. Create and revoke them from **Manage
 projects → Manage API keys**, or **Settings → Manage API keys**.
 
 Machine keys are separate from [user accounts and project roles](USERS.md).
-Audit trails and PostgreSQL remain follow-up milestones.
+[Audit history](AUDIT.md) records key lifecycle and supported resource changes.
+Machine keys cannot read that journal. PostgreSQL remains a follow-up milestone.
 
 ## Operator access and local mode
 
