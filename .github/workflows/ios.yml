@@ -29,12 +29,12 @@ jobs:
           xcodebuild -project TextDockOTP.xcodeproj -scheme TextDockOTP -destination "platform=iOS Simulator,id=$device" -derivedDataPath build -resultBundlePath build/Tests.xcresult CODE_SIGNING_ALLOWED=NO test
       - name: Package the simulator app
         run: ditto -c -k --sequesterRsrc --keepParent build/Build/Products/Debug-iphonesimulator/TextDockOTP.app build/textdock-otp-ios-simulator.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: textdock-otp-ios-simulator
           path: examples/ios-otp/build/textdock-otp-ios-simulator.zip
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ios-otp-test-results
